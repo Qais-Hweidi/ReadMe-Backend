@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken'
+import { config } from '../../config/config.js'
 import UserModel from '../models/UserModel.js'
 
 export const protect = async (req, res, next) => {
   try {
     let token
 
-    // Check for token in headers
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    if (req.headers.authorization?.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1]
     }
 
@@ -18,10 +18,7 @@ export const protect = async (req, res, next) => {
     }
 
     try {
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET)
-
-      // Add user to req object
+      const decoded = jwt.verify(token, config.jwt.secret)
       req.user = await UserModel.findById(decoded.id)
       next()
     } catch (error) {
@@ -34,7 +31,7 @@ export const protect = async (req, res, next) => {
     res.status(500).json({
       success: false,
       message: 'Server error',
-      error: error.message,
+      error: config.env === 'development' ? error.message : undefined,
     })
   }
 }

@@ -1,49 +1,37 @@
+import { config } from './config/config.js'
 import express from 'express'
-import dotenv from 'dotenv'
+import mongoose from 'mongoose'
 import cors from 'cors'
-import helmet from 'helmet'
-import morgan from 'morgan'
-import { corsOptions } from './config/cors.js'
-import { errorHandler } from './api/middlewares/errorHandler.js'
-import connectDB from './config/database.js'
-import authRoutes from './api/routes/AuthRoutes.js'
-
-dotenv.config()
-connectDB()
+import authRoutes from './api/routes/UserRoutes.js'
 
 const app = express()
 
-// Security Middleware
-app.use(helmet())
-app.use(cors(corsOptions))
-app.use(morgan('dev'))
-
-// Body Parser
+app.use(cors())
 app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
 
-// Routes
+mongoose
+  .connect(config.db.uri)
+  .then(() => {
+    console.log('MongoDB Connected')
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err)
+    process.exit(1)
+  })
+
 app.use('/api/v1/users', authRoutes)
 
-// Health Check
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'readme-api' })
 })
 
-app.use(errorHandler)
-
 app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' })
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+  })
 })
 
-const PORT = process.env.PORT || 3000
-
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
-})
-
-process.on('unhandledRejection', (err) => {
-  console.log('UNHANDLED REJECTION! 💥 Shutting down...')
-  console.log(err.name, err.message)
-  process.exit(1)
+app.listen(config.port, () => {
+  console.log(`Server running in ${config.env} mode on port ${config.port}`)
 })
