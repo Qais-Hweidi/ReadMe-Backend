@@ -3,6 +3,7 @@ import express from 'express'
 import mongoose from 'mongoose'
 import cors from 'cors'
 import authRoutes from './api/routes/UserRoutes.js'
+import categoryRoutes from './api/routes/CategoryRoutes.js'
 
 const app = express()
 
@@ -20,6 +21,7 @@ mongoose
   })
 
 app.use('/api/v1/users', authRoutes)
+app.use('/api/v1/categories', categoryRoutes)
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'readme-api' })
