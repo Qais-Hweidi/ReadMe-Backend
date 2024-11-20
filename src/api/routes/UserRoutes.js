@@ -1,12 +1,21 @@
 import express from 'express'
-import { register, login, verifyEmail, getMe } from '../controllers/UserController.js'
+import {
+  register,
+  login,
+  verifyEmail,
+  getMe,
+  updateProfile,
+  deleteProfilePicture,
+} from '../controllers/UserController.js'
 import { protect } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
+import { upload } from '../middlewares/uploadMiddleware.js'
 import {
   registerValidation,
   loginValidation,
   verifyEmailValidation,
 } from '../validations/AuthValidation.js'
+import { updateProfileValidation } from '../validations/UserValidation.js'
 
 const router = express.Router()
 
@@ -15,7 +24,15 @@ router.post('/auth/register', validate(registerValidation), register)
 router.post('/auth/login', validate(loginValidation), login)
 router.post('/auth/verify-email', validate(verifyEmailValidation), verifyEmail)
 
-// User info route
+// User profile routes
 router.get('/me', protect, getMe)
+router.put(
+  '/profile',
+  protect,
+  upload.single('profilePicture'),
+  validate(updateProfileValidation),
+  updateProfile
+)
+router.delete('/profile/picture', protect, deleteProfilePicture)
 
 export default router

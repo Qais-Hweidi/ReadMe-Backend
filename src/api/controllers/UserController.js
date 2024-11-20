@@ -4,10 +4,11 @@ import mongoose from 'mongoose'
 import UserModel from '../models/UserModel.js'
 import { sendVerificationEmail } from '../../config/EmailConfig.js'
 import { config } from '../../config/config.js'
+import { cloudinary } from '../../config/cloudinaryConfig.js'
 
 const pendingVerifications = new Map()
 
-const generateToken = (userId) => {
+const generateToken = userId => {
   return jwt.sign({ id: userId }, config.jwt.secret, {
     expiresIn: '90d', // keep it long for now
   })
@@ -48,15 +49,17 @@ export const register = async (req, res) => {
       tempUserId: tempId,
     })
 
-    setTimeout(() => {
-      pendingVerifications.delete(tempId.toString())
-    }, 10 * 60 * 1000)
-
+    setTimeout(
+      () => {
+        pendingVerifications.delete(tempId.toString())
+      },
+      10 * 60 * 1000
+    )
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Failed to send verification email',
-      error: config.env === 'development' ? error.message : undefined
+      error: config.env === 'development' ? error.message : undefined,
     })
   }
 }
@@ -66,7 +69,7 @@ export const verifyEmail = async (req, res) => {
     const { tempUserId, verificationCode } = req.body
 
     const pendingUser = pendingVerifications.get(tempUserId)
-    
+
     if (!pendingUser) {
       return res.status(404).json({
         success: false,
@@ -112,7 +115,7 @@ export const verifyEmail = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error',
-      error: config.env === 'development' ? error.message : undefined
+      error: config.env === 'development' ? error.message : undefined,
     })
   }
 }
@@ -158,7 +161,7 @@ export const login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error',
-      error: config.env === 'development' ? error.message : undefined
+      error: config.env === 'development' ? error.message : undefined,
     })
   }
 }
@@ -166,20 +169,130 @@ export const login = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await UserModel.findById(req.user._id)
-    
+
     res.json({
       success: true,
       user: {
         id: user._id,
         email: user.email,
         isVerified: user.isVerified,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        gender: user.gender,
+        profilePicture: user.profilePicture,
       },
     })
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Server error',
-      error: config.env === 'development' ? error.message : undefined
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const updateProfile = async (req, res) => {
+  const updateData = { ...req.body }
+
+  try {
+    const currentUser = await UserModel.findById(req.user._id)
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      })
+    }
+
+    if (req.file) {
+      const b64 = Buffer.from(req.file.buffer).toString('base64')
+      const dataURI = `data:${req.file.mimetype};base64,${b64}`
+
+      if (currentUser.profilePicture) {
+        const urlParts = currentUser.profilePicture.split('/')
+        const filename = urlParts[urlParts.length - 1]
+        const oldPublicId = `profiles/${filename.split('.')[0]}`
+
+        try {
+          await cloudinary.uploader.destroy(oldPublicId)
+        } catch (error) {
+          console.error('Error deleting old profile picture:', error)
+        }
+      }
+
+      const uploadResult = await cloudinary.uploader.upload(dataURI, {
+        folder: 'profiles',
+        resource_type: 'auto',
+      })
+
+      updateData.profilePicture = uploadResult.secure_url
+    }
+
+    const user = await UserModel.findByIdAndUpdate(req.user._id, updateData, {
+      new: true,
+      runValidators: true,
+    })
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        phoneNumber: user.phoneNumber,
+        gender: user.gender,
+        profilePicture: user.profilePicture,
+      },
+    })
+  } catch (error) {
+    if (req.file && updateData.profilePicture) {
+      const urlParts = updateData.profilePicture.split('/')
+      const filename = urlParts[urlParts.length - 1]
+      const publicId = `profiles/${filename.split('.')[0]}`
+
+      try {
+        await cloudinary.uploader.destroy(publicId)
+      } catch (err) {
+        console.error('Error cleaning up uploaded file:', err)
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const deleteProfilePicture = async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.user._id)
+    let publicId = null
+
+    if (user.profilePicture) {
+      const urlParts = user.profilePicture.split('/')
+      const filename = urlParts[urlParts.length - 1]
+      publicId = `profiles/${filename.split('.')[0]}`
+
+      try {
+        await cloudinary.uploader.destroy(publicId)
+      } catch (error) {
+        console.error('Error deleting profile picture:', error)
+      }
+    }
+
+    user.profilePicture = ''
+    await user.save()
+
+    res.json({
+      success: true,
+      message: 'Profile picture deleted successfully',
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
     })
   }
 }

@@ -20,6 +20,20 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    fullName: {
+      type: String,
+    },
+    phoneNumber: {
+      type: String,
+    },
+    gender: {
+      type: String,
+      enum: ['male', 'female'],
+    },
+    profilePicture: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,
