@@ -5,6 +5,7 @@ import cors from 'cors'
 import authRoutes from './api/routes/UserRoutes.js'
 import categoryRoutes from './api/routes/CategoryRoutes.js'
 import bookRoutes from './api/routes/BookRoutes.js'
+import reviewRoutes from './api/routes/ReviewRoutes.js'
 
 const app = express()
 
@@ -24,6 +25,7 @@ mongoose
 app.use('/api/v1/users', authRoutes)
 app.use('/api/v1/categories', categoryRoutes)
 app.use('/api/v1/books', bookRoutes)
+app.use('/api/v1/books/:bookId/reviews', reviewRoutes)
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'readme-api' })
