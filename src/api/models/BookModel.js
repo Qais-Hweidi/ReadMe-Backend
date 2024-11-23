@@ -10,10 +10,11 @@ const bookSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    author: {
-      type: String,
+    authors: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Author',
       required: true,
-    },
+    }],
     price: {
       type: Number,
       min: 0,

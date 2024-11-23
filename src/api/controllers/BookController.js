@@ -4,7 +4,10 @@ import { cloudinary } from '../../config/cloudinaryConfig.js'
 
 export const getBooks = async (req, res) => {
   try {
-    const books = await BookModel.find().populate('category', 'title').sort({ createdAt: -1 })
+    const books = await BookModel.find()
+      .populate('category', 'title')
+      .populate('authors', 'fullName profilePicture')
+      .sort({ createdAt: -1 })
 
     res.json({
       success: true,
@@ -21,7 +24,9 @@ export const getBooks = async (req, res) => {
 
 export const getBookById = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.id).populate('category', 'title')
+    const book = await BookModel.findById(req.params.id)
+      .populate('category', 'title')
+      .populate('authors', 'fullName bio profilePicture socialLinks')
 
     if (!book) {
       return res.status(404).json({
@@ -52,6 +57,30 @@ export const createBook = async (req, res) => {
       })
     }
 
+    // Handle authors field
+    let authorIds = []
+    if (typeof req.body.authors === 'string') {
+      try {
+        // Try to parse as JSON array first
+        authorIds = JSON.parse(req.body.authors)
+      } catch (e) {
+        // If parsing fails, treat it as a single ID
+        authorIds = [req.body.authors]
+      }
+    } else if (Array.isArray(req.body.authors)) {
+      authorIds = req.body.authors
+    } else if (req.body.authors) {
+      authorIds = [req.body.authors]
+    }
+
+    // Ensure authorIds is an array
+    if (!Array.isArray(authorIds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Authors must be provided as an array or single ID',
+      })
+    }
+
     const b64 = Buffer.from(req.file.buffer).toString('base64')
     const dataURI = `data:${req.file.mimetype};base64,${b64}`
 
@@ -62,14 +91,20 @@ export const createBook = async (req, res) => {
 
     const book = await BookModel.create({
       ...req.body,
+      authors: authorIds,
       image: uploadResult.secure_url,
     })
 
+    const populatedBook = await BookModel.findById(book._id)
+      .populate('category', 'title')
+      .populate('authors', 'fullName profilePicture')
+
     res.status(201).json({
       success: true,
-      book,
+      book: populatedBook,
     })
   } catch (error) {
+    console.error('Create book error:', error)
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -88,6 +123,26 @@ export const updateBook = async (req, res) => {
         success: false,
         message: 'Book not found',
       })
+    }
+
+    // Handle authors array if it exists in the request
+    if (req.body.authors) {
+      try {
+        // First try to parse as JSON if it's a string
+        updateData.authors = typeof req.body.authors === 'string' 
+          ? JSON.parse(req.body.authors)
+          : req.body.authors
+
+        // Ensure it's an array
+        if (!Array.isArray(updateData.authors)) {
+          updateData.authors = [updateData.authors]
+        }
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Authors must be provided as a valid array or JSON string array',
+        })
+      }
     }
 
     if (req.file) {
@@ -119,7 +174,9 @@ export const updateBook = async (req, res) => {
     const updatedBook = await BookModel.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
-    }).populate('category', 'title')
+    })
+      .populate('category', 'title')
+      .populate('authors', 'fullName profilePicture')
 
     res.json({
       success: true,

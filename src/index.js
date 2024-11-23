@@ -5,7 +5,9 @@ import cors from 'cors'
 import authRoutes from './api/routes/UserRoutes.js'
 import categoryRoutes from './api/routes/CategoryRoutes.js'
 import bookRoutes from './api/routes/BookRoutes.js'
+import authorRoutes from './api/routes/AuthorRoutes.js'
 import reviewRoutes from './api/routes/ReviewRoutes.js'
+import reportRoutes from './api/routes/ReportRoutes.js'
 
 const app = express()
 
@@ -22,19 +24,24 @@ mongoose
     process.exit(1)
   })
 
+app.use('/api/v1/authors', authorRoutes)
 app.use('/api/v1/users', authRoutes)
 app.use('/api/v1/categories', categoryRoutes)
 app.use('/api/v1/books', bookRoutes)
 app.use('/api/v1/books/:bookId/reviews', reviewRoutes)
+app.use('/api/v1/books/:bookId/reports', reportRoutes)
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'readme-api' })
 })
 
-app.use((req, res) => {
+app.use((req, res, next) => {
+  console.log(`Route not found: ${req.method} ${req.url}`)
   res.status(404).json({
     success: false,
     message: 'Route not found',
+    path: req.url,
+    method: req.method
   })
 })
 
