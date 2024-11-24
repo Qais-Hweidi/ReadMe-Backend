@@ -129,9 +129,8 @@ export const updateBook = async (req, res) => {
     if (req.body.authors) {
       try {
         // First try to parse as JSON if it's a string
-        updateData.authors = typeof req.body.authors === 'string' 
-          ? JSON.parse(req.body.authors)
-          : req.body.authors
+        updateData.authors =
+          typeof req.body.authors === 'string' ? JSON.parse(req.body.authors) : req.body.authors
 
         // Ensure it's an array
         if (!Array.isArray(updateData.authors)) {
