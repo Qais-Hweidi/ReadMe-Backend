@@ -5,6 +5,8 @@ import UserModel from '../models/UserModel.js'
 import { sendVerificationEmail } from '../../config/EmailConfig.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
+import ReviewModel from '../models/ReviewModel.js'
+import ReportModel from '../models/ReportModel.js'
 
 const pendingVerifications = new Map()
 
@@ -287,6 +289,64 @@ export const deleteProfilePicture = async (req, res) => {
     res.json({
       success: true,
       message: 'Profile picture deleted successfully',
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const logout = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: 'Successfully logged out',
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const deleteAccount = async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.user._id)
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      })
+    }
+
+    // Delete profile picture from Cloudinary if exists
+    if (user.profilePicture) {
+      const urlParts = user.profilePicture.split('/')
+      const filename = urlParts[urlParts.length - 1]
+      const publicId = `profiles/${filename.split('.')[0]}`
+
+      try {
+        await cloudinary.uploader.destroy(publicId)
+      } catch (error) {
+        console.error('Error deleting profile picture:', error)
+      }
+    }
+
+    await ReviewModel.deleteMany({ user: user._id })
+
+    await ReportModel.deleteMany({ user: user._id })
+
+    await user.deleteOne()
+
+    res.json({
+      success: true,
+      message: 'Account deleted successfully',
     })
   } catch (error) {
     res.status(500).json({

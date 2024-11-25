@@ -6,6 +6,8 @@ import {
   getMe,
   updateProfile,
   deleteProfilePicture,
+  logout,
+  deleteAccount,
 } from '../controllers/UserController.js'
 import { protect } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
@@ -23,6 +25,7 @@ const router = express.Router()
 router.post('/auth/register', validate(registerValidation), register)
 router.post('/auth/login', validate(loginValidation), login)
 router.post('/auth/verify-email', validate(verifyEmailValidation), verifyEmail)
+router.post('/auth/logout', protect, logout)
 
 // User profile routes
 router.get('/me', protect, getMe)
@@ -34,5 +37,6 @@ router.put(
   updateProfile
 )
 router.delete('/profile/picture', protect, deleteProfilePicture)
+router.delete('/account', protect, deleteAccount)
 
 export default router
