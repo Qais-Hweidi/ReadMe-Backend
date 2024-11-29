@@ -34,6 +34,10 @@ const authorSchema = new mongoose.Schema(
         trim: true,
       },
     },
+    isVisible: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

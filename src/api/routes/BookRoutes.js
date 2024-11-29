@@ -9,6 +9,7 @@ import {
   incrementBookDownloads,
   incrementBookReadings,
   toggleBookFavorite,
+  toggleBookVisibility,
 } from '../controllers/BookController.js'
 import { protect } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
@@ -25,6 +26,7 @@ router.get('/:id', getBookById)
 router.post('/', protect, upload.single('image'), validate(createBookValidation), createBook)
 router.put('/:id', protect, upload.single('image'), validate(updateBookValidation), updateBook)
 router.delete('/:id', protect, deleteBook)
+router.patch('/:id/visibility', protect, toggleBookVisibility)
 
 // Interaction routes
 router.post('/:id/view', protect, incrementBookViews)

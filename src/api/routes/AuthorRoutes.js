@@ -5,6 +5,7 @@ import {
   createAuthor,
   updateAuthor,
   deleteAuthor,
+  toggleAuthorVisibility,
 } from '../controllers/AuthorController.js'
 import { protect } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
@@ -33,5 +34,6 @@ router.put(
   updateAuthor
 )
 router.delete('/:id', protect, deleteAuthor)
+router.patch('/:id/visibility', protect, toggleAuthorVisibility)
 
 export default router

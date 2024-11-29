@@ -17,18 +17,38 @@ export const searchAll = async (req, res) => {
 
     const authors = await AuthorModel.find({
       fullName: searchRegex,
+      $or: [
+        { isVisible: true },
+        { isVisible: { $exists: false } }
+      ]
     }).sort({ createdAt: -1 })
 
     const books = await BookModel.find({
-      $or: [
-        { title: searchRegex },
-        { description: searchRegex }, // Added search in description
+      $and: [
         {
-          authors: {
-            $in: (await AuthorModel.find({ fullName: searchRegex }, '_id')).map(
-              author => author._id
-            ),
-          },
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            {
+              authors: {
+                $in: (await AuthorModel.find({
+                  fullName: searchRegex,
+                  $or: [
+                    { isVisible: true },
+                    { isVisible: { $exists: false } }
+                  ]
+                }, '_id')).map(
+                  author => author._id
+                ),
+              },
+            },
+          ],
+        },
+        {
+          $or: [
+            { isVisible: true },
+            { isVisible: { $exists: false } }
+          ]
         },
       ],
     })

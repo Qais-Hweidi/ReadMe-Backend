@@ -4,7 +4,12 @@ import { cloudinary } from '../../config/cloudinaryConfig.js'
 
 export const getAuthors = async (req, res) => {
   try {
-    const authors = await AuthorModel.find().sort({ createdAt: -1 })
+    const authors = await AuthorModel.find({
+      $or: [
+        { isVisible: true },
+        { isVisible: { $exists: false } }
+      ]
+    }).sort({ createdAt: -1 })
     res.json({
       success: true,
       authors,
@@ -20,7 +25,13 @@ export const getAuthors = async (req, res) => {
 
 export const getAuthorById = async (req, res) => {
   try {
-    const author = await AuthorModel.findById(req.params.id)
+    const author = await AuthorModel.findOne({
+      _id: req.params.id,
+      $or: [
+        { isVisible: true },
+        { isVisible: { $exists: false } }
+      ]
+    })
     if (!author) {
       return res.status(404).json({
         success: false,
@@ -165,6 +176,34 @@ export const deleteAuthor = async (req, res) => {
     res.json({
       success: true,
       message: 'Author deleted successfully',
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const toggleAuthorVisibility = async (req, res) => {
+  try {
+    const author = await AuthorModel.findById(req.params.id)
+
+    if (!author) {
+      return res.status(404).json({
+        success: false,
+        message: 'Author not found',
+      })
+    }
+
+    author.isVisible = !author.isVisible
+    await author.save()
+
+    res.json({
+      success: true,
+      message: `Author is now ${author.isVisible ? 'visible' : 'hidden'}`,
+      isVisible: author.isVisible,
     })
   } catch (error) {
     res.status(500).json({

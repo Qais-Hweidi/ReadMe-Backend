@@ -4,7 +4,12 @@ import { cloudinary } from '../../config/cloudinaryConfig.js'
 
 export const getBooks = async (req, res) => {
   try {
-    const books = await BookModel.find()
+    const books = await BookModel.find({
+      $or: [
+        { isVisible: true },
+        { isVisible: { $exists: false } }
+      ]
+    })
       .populate('category', 'title')
       .populate('authors', 'fullName profilePicture')
       .sort({ createdAt: -1 })
@@ -24,7 +29,13 @@ export const getBooks = async (req, res) => {
 
 export const getBookById = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.id)
+    const book = await BookModel.findOne({
+      _id: req.params.id,
+      $or: [
+        { isVisible: true },
+        { isVisible: { $exists: false } }
+      ]
+    })
       .populate('category', 'title')
       .populate('authors', 'fullName bio profilePicture socialLinks')
 
@@ -331,6 +342,34 @@ export const toggleBookFavorite = async (req, res) => {
     res.json({
       success: true,
       numberOfFavourites: book.numberOfFavourites,
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const toggleBookVisibility = async (req, res) => {
+  try {
+    const book = await BookModel.findById(req.params.id)
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: 'Book not found',
+      })
+    }
+
+    book.isVisible = !book.isVisible
+    await book.save()
+
+    res.json({
+      success: true,
+      message: `Book is now ${book.isVisible ? 'visible' : 'hidden'}`,
+      isVisible: book.isVisible,
     })
   } catch (error) {
     res.status(500).json({

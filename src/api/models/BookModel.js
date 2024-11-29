@@ -62,6 +62,10 @@ const bookSchema = new mongoose.Schema(
       ref: 'Category',
       required: true,
     },
+    isVisible: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

@@ -4,7 +4,12 @@ import { cloudinary } from '../../config/cloudinaryConfig.js'
 
 export const getCategories = async (req, res) => {
   try {
-    const categories = await CategoryModel.find().sort({ createdAt: -1 })
+    const categories = await CategoryModel.find({
+      $or: [
+        { isVisible: true },
+        { isVisible: { $exists: false } }
+      ]
+    }).sort({ createdAt: -1 })
     res.json({
       success: true,
       categories,
@@ -154,6 +159,34 @@ export const deleteCategory = async (req, res) => {
     res.json({
       success: true,
       message: 'Category deleted successfully',
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const toggleCategoryVisibility = async (req, res) => {
+  try {
+    const category = await CategoryModel.findById(req.params.id)
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: 'Category not found',
+      })
+    }
+
+    category.isVisible = !category.isVisible
+    await category.save()
+
+    res.json({
+      success: true,
+      message: `Category is now ${category.isVisible ? 'visible' : 'hidden'}`,
+      isVisible: category.isVisible,
     })
   } catch (error) {
     res.status(500).json({
