@@ -10,6 +10,7 @@ import reviewRoutes from './api/routes/ReviewRoutes.js'
 import reportRoutes from './api/routes/ReportRoutes.js'
 import searchRoutes from './api/routes/SearchRoutes.js'
 import readingHistoryRoutes from './api/routes/ReadingHistoryRoutes.js'
+import favoriteRoutes from './api/routes/FavoriteRoutes.js'
 
 const app = express()
 
@@ -34,6 +35,7 @@ app.use('/api/v1/books/:bookId/reviews', reviewRoutes)
 app.use('/api/v1/books/:bookId/reports', reportRoutes)
 app.use('/api/v1/search', searchRoutes)
 app.use('/api/v1/reading-history', readingHistoryRoutes)
+app.use('/api/v1/favorites', favoriteRoutes)
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'readme-api' })
