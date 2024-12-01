@@ -1,4 +1,5 @@
 import AuthorModel from '../models/AuthorModel.js'
+import BookModel from '../models/BookModel.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
 
@@ -204,6 +205,63 @@ export const toggleAuthorVisibility = async (req, res) => {
       success: true,
       message: `Author is now ${author.isVisible ? 'visible' : 'hidden'}`,
       isVisible: author.isVisible,
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const getAuthorsWithBookCount = async (req, res) => {
+  try {
+    const authors = await AuthorModel.aggregate([
+      {
+        $match: {
+          $or: [
+            { isVisible: true },
+            { isVisible: { $exists: false } }
+          ]
+        }
+      },
+      {
+        $lookup: {
+          from: 'books',
+          localField: '_id',
+          foreignField: 'authors',
+          pipeline: [
+            {
+              $match: {
+                $or: [
+                  { isVisible: true },
+                  { isVisible: { $exists: false } }
+                ]
+              }
+            }
+          ],
+          as: 'books'
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          fullName: 1,
+          bio: 1,
+          profilePicture: 1,
+          socialLinks: 1,
+          numberOfBooks: { $size: '$books' }
+        }
+      },
+      {
+        $sort: { numberOfBooks: -1 }
+      }
+    ])
+
+    res.json({
+      success: true,
+      authors
     })
   } catch (error) {
     res.status(500).json({

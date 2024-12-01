@@ -6,16 +6,18 @@ import {
   updateAuthor,
   deleteAuthor,
   toggleAuthorVisibility,
+  getAuthorsWithBookCount,
 } from '../controllers/AuthorController.js'
 import { protect } from '../middlewares/AuthMiddleware.js'
-import { validate } from '../middlewares/ValidateMiddleware.js'
 import { upload } from '../middlewares/uploadMiddleware.js'
+import { validate } from '../middlewares/ValidateMiddleware.js'
 import { createAuthorValidation, updateAuthorValidation } from '../validations/AuthorValidation.js'
 
 const router = express.Router()
 
 // Public routes
 router.get('/', getAuthors)
+router.get('/with-book-count', getAuthorsWithBookCount)
 router.get('/:id', getAuthorById)
 
 // Protected routes
