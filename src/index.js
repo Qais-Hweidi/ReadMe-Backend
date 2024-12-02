@@ -2,6 +2,7 @@ import { config } from './config/config.js'
 import express from 'express'
 import mongoose from 'mongoose'
 import cors from 'cors'
+import { StatusCodes } from 'http-status-codes'
 import authRoutes from './api/routes/UserRoutes.js'
 import categoryRoutes from './api/routes/CategoryRoutes.js'
 import bookRoutes from './api/routes/BookRoutes.js'
@@ -42,12 +43,12 @@ app.use('/api/v1/subscription-plans', subscriptionPlanRoutes)
 app.use('/api/v1/subscriptions', subscriptionRoutes)
 
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', service: 'readme-api' })
+  res.status(StatusCodes.OK).json({ status: 'ok', service: 'readme-api' })
 })
 
 app.use((req, res, next) => {
   console.log(`Route not found: ${req.method} ${req.url}`)
-  res.status(404).json({
+  res.status(StatusCodes.NOT_FOUND).json({
     success: false,
     message: 'Route not found',
     path: req.url,
