@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import BookModel from '../models/BookModel.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
@@ -14,13 +15,11 @@ export const getBooks = async (req, res) => {
       .populate('authors', 'fullName profilePicture')
       .sort({ createdAt: -1 })
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       books,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -40,19 +39,16 @@ export const getBookById = async (req, res) => {
       .populate('authors', 'fullName bio profilePicture socialLinks')
 
     if (!book) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
       })
     }
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       book,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -62,8 +58,7 @@ export const getBookById = async (req, res) => {
 export const createBook = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'Please upload a book cover image',
       })
     }
@@ -86,8 +81,7 @@ export const createBook = async (req, res) => {
 
     // Ensure authorIds is an array
     if (!Array.isArray(authorIds)) {
-      return res.status(400).json({
-        success: false,
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'Authors must be provided as an array or single ID',
       })
     }
@@ -110,14 +104,12 @@ export const createBook = async (req, res) => {
       .populate('category', 'title')
       .populate('authors', 'fullName profilePicture')
 
-    res.status(201).json({
-      success: true,
+    res.status(StatusCodes.CREATED).json({
       book: populatedBook,
     })
   } catch (error) {
     console.error('Create book error:', error)
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -130,8 +122,7 @@ export const updateBook = async (req, res) => {
     const book = await BookModel.findById(req.params.id)
 
     if (!book) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
       })
     }
@@ -148,8 +139,7 @@ export const updateBook = async (req, res) => {
           updateData.authors = [updateData.authors]
         }
       } catch (error) {
-        return res.status(400).json({
-          success: false,
+        return res.status(StatusCodes.BAD_REQUEST).json({
           message: 'Authors must be provided as a valid array or JSON string array',
         })
       }
@@ -188,13 +178,11 @@ export const updateBook = async (req, res) => {
       .populate('category', 'title')
       .populate('authors', 'fullName profilePicture')
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       book: updatedBook,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -206,8 +194,7 @@ export const deleteBook = async (req, res) => {
     const book = await BookModel.findById(req.params.id)
 
     if (!book) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
       })
     }
@@ -227,13 +214,11 @@ export const deleteBook = async (req, res) => {
 
     await book.deleteOne()
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: 'Book deleted successfully',
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -249,19 +234,17 @@ export const incrementBookViews = async (req, res) => {
     )
 
     if (!book) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
       })
     }
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
+      message: 'Views incremented successfully',
       numberOfViews: book.numberOfViews,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -277,19 +260,17 @@ export const incrementBookDownloads = async (req, res) => {
     )
 
     if (!book) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
       })
     }
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
+      message: 'Downloads incremented successfully',
       numberOfDownloads: book.numberOfDownloads,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -305,19 +286,17 @@ export const incrementBookReadings = async (req, res) => {
     )
 
     if (!book) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
       })
     }
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
+      message: 'Readings incremented successfully',
       numberOfReadings: book.numberOfReadings,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -333,19 +312,17 @@ export const toggleBookFavorite = async (req, res) => {
     )
 
     if (!book) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
       })
     }
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
+      message: 'Favourites toggled successfully',
       numberOfFavourites: book.numberOfFavourites,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -357,8 +334,7 @@ export const toggleBookVisibility = async (req, res) => {
     const book = await BookModel.findById(req.params.id)
 
     if (!book) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
       })
     }
@@ -366,14 +342,12 @@ export const toggleBookVisibility = async (req, res) => {
     book.isVisible = !book.isVisible
     await book.save()
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: `Book is now ${book.isVisible ? 'visible' : 'hidden'}`,
       isVisible: book.isVisible,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })

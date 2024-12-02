@@ -7,6 +7,11 @@ import {
   deleteSubscriptionPlan,
 } from '../controllers/subscriptionPlanController.js'
 import { protect, admin } from '../middlewares/AuthMiddleware.js'
+import { validate } from '../middlewares/ValidateMiddleware.js'
+import {
+  createSubscriptionPlanValidation,
+  updateSubscriptionPlanValidation,
+} from '../validations/SubscriptionPlanValidation.js'
 
 const router = express.Router()
 
@@ -14,9 +19,9 @@ const router = express.Router()
 router.get('/visible', getSubscriptionPlans)
 
 // Admin routes
-router.post('/', protect, admin, createSubscriptionPlan)
+router.post('/', protect, admin, validate(createSubscriptionPlanValidation), createSubscriptionPlan)
 router.get('/', protect, admin, getAllSubscriptionPlans)
-router.put('/:id', protect, admin, updateSubscriptionPlan)
+router.put('/:id', protect, admin, validate(updateSubscriptionPlanValidation), updateSubscriptionPlan)
 router.delete('/:id', protect, admin, deleteSubscriptionPlan)
 
 export default router

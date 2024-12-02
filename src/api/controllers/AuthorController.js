@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import AuthorModel from '../models/AuthorModel.js'
 import BookModel from '../models/BookModel.js'
 import { config } from '../../config/config.js'
@@ -11,13 +12,11 @@ export const getAuthors = async (req, res) => {
         { isVisible: { $exists: false } }
       ]
     }).sort({ createdAt: -1 })
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       authors,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -34,19 +33,16 @@ export const getAuthorById = async (req, res) => {
       ]
     })
     if (!author) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Author not found',
       })
     }
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       author,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -80,13 +76,11 @@ export const createAuthor = async (req, res) => {
 
     const author = await AuthorModel.create(authorData)
 
-    res.status(201).json({
-      success: true,
+    res.status(StatusCodes.CREATED).json({
       author,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -99,8 +93,7 @@ export const updateAuthor = async (req, res) => {
     const author = await AuthorModel.findById(req.params.id)
 
     if (!author) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Author not found',
       })
     }
@@ -109,7 +102,6 @@ export const updateAuthor = async (req, res) => {
       const b64 = Buffer.from(req.file.buffer).toString('base64')
       const dataURI = `data:${req.file.mimetype};base64,${b64}`
 
-      // Delete old image if it exists
       if (author.profilePicture) {
         const urlParts = author.profilePicture.split('/')
         const filename = urlParts[urlParts.length - 1]
@@ -135,13 +127,11 @@ export const updateAuthor = async (req, res) => {
       runValidators: true,
     })
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       author: updatedAuthor,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -153,13 +143,11 @@ export const deleteAuthor = async (req, res) => {
     const author = await AuthorModel.findById(req.params.id)
 
     if (!author) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Author not found',
       })
     }
 
-    // Delete profile picture from Cloudinary if it exists
     if (author.profilePicture) {
       const urlParts = author.profilePicture.split('/')
       const filename = urlParts[urlParts.length - 1]
@@ -174,13 +162,11 @@ export const deleteAuthor = async (req, res) => {
 
     await author.deleteOne()
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: 'Author deleted successfully',
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -192,8 +178,7 @@ export const toggleAuthorVisibility = async (req, res) => {
     const author = await AuthorModel.findById(req.params.id)
 
     if (!author) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Author not found',
       })
     }
@@ -201,14 +186,12 @@ export const toggleAuthorVisibility = async (req, res) => {
     author.isVisible = !author.isVisible
     await author.save()
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: `Author is now ${author.isVisible ? 'visible' : 'hidden'}`,
       isVisible: author.isVisible,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -248,24 +231,17 @@ export const getAuthorsWithBookCount = async (req, res) => {
         $project: {
           _id: 1,
           fullName: 1,
-          bio: 1,
           profilePicture: 1,
-          socialLinks: 1,
-          numberOfBooks: { $size: '$books' }
+          bookCount: { $size: '$books' },
         }
       },
-      {
-        $sort: { numberOfBooks: -1 }
-      }
     ])
 
-    res.json({
-      success: true,
-      authors
+    res.status(StatusCodes.OK).json({
+      authors,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })

@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import CategoryModel from '../models/CategoryModel.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
@@ -10,13 +11,11 @@ export const getCategories = async (req, res) => {
         { isVisible: { $exists: false } }
       ]
     }).sort({ createdAt: -1 })
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       categories,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -29,16 +28,14 @@ export const createCategory = async (req, res) => {
     const { title } = req.body
 
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'Please upload an image',
       })
     }
 
     const categoryExists = await CategoryModel.findOne({ title })
     if (categoryExists) {
-      return res.status(400).json({
-        success: false,
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'Category already exists',
       })
     }
@@ -62,13 +59,11 @@ export const createCategory = async (req, res) => {
       image: uploadResult.secure_url,
     })
 
-    res.status(201).json({
-      success: true,
+    res.status(StatusCodes.CREATED).json({
       category,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -83,8 +78,7 @@ export const updateCategory = async (req, res) => {
 
     const category = await CategoryModel.findById(id)
     if (!category) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Category not found',
       })
     }
@@ -120,13 +114,11 @@ export const updateCategory = async (req, res) => {
 
     const updatedCategory = await CategoryModel.findByIdAndUpdate(id, updateData, { new: true })
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       category: updatedCategory,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -140,8 +132,7 @@ export const deleteCategory = async (req, res) => {
 
     const category = await CategoryModel.findById(id)
     if (!category) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Category not found',
       })
     }
@@ -156,13 +147,11 @@ export const deleteCategory = async (req, res) => {
 
     await CategoryModel.findByIdAndDelete(id)
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: 'Category deleted successfully',
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -174,8 +163,7 @@ export const toggleCategoryVisibility = async (req, res) => {
     const category = await CategoryModel.findById(req.params.id)
 
     if (!category) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Category not found',
       })
     }
@@ -183,14 +171,12 @@ export const toggleCategoryVisibility = async (req, res) => {
     category.isVisible = !category.isVisible
     await category.save()
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: `Category is now ${category.isVisible ? 'visible' : 'hidden'}`,
       isVisible: category.isVisible,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })

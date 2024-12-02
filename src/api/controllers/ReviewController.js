@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import ReviewModel from '../models/ReviewModel.js'
 import { config } from '../../config/config.js'
 
@@ -7,13 +8,11 @@ export const getBookReviews = async (req, res) => {
       .populate('user', 'fullName profilePicture')
       .sort({ createdAt: -1 })
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       reviews,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -33,20 +32,17 @@ export const createReview = async (req, res) => {
       'fullName profilePicture'
     )
 
-    res.status(201).json({
-      success: true,
+    res.status(StatusCodes.CREATED).json({
       review: populatedReview,
     })
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'You have already reviewed this book',
       })
     }
 
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -61,8 +57,7 @@ export const updateReview = async (req, res) => {
     })
 
     if (!review) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Review not found or not authorized',
       })
     }
@@ -72,13 +67,11 @@ export const updateReview = async (req, res) => {
       runValidators: true,
     }).populate('user', 'fullName profilePicture')
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       review: updatedReview,
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -93,21 +86,18 @@ export const deleteReview = async (req, res) => {
     })
 
     if (!review) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Review not found or not authorized',
       })
     }
 
     await review.deleteOne()
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: 'Review deleted successfully',
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })

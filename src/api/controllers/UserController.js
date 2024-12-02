@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
+import { StatusCodes } from 'http-status-codes'
 import UserModel from '../models/UserModel.js'
 import { sendVerificationEmail } from '../../config/EmailConfig.js'
 import { config } from '../../config/config.js'
@@ -26,8 +27,7 @@ export const register = async (req, res) => {
 
     const userExists = await UserModel.findOne({ email })
     if (userExists) {
-      return res.status(400).json({
-        success: false,
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'User already exists',
       })
     }
@@ -45,8 +45,7 @@ export const register = async (req, res) => {
 
     await sendVerificationEmail(email, verificationCode)
 
-    res.status(201).json({
-      success: true,
+    res.status(StatusCodes.CREATED).json({
       message: 'Registration initiated. Please check your email for verification code.',
       tempUserId: tempId,
     })
@@ -58,8 +57,7 @@ export const register = async (req, res) => {
       10 * 60 * 1000
     )
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Failed to send verification email',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -73,23 +71,20 @@ export const verifyEmail = async (req, res) => {
     const pendingUser = pendingVerifications.get(tempUserId)
 
     if (!pendingUser) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Verification request not found or expired',
       })
     }
 
     if (pendingUser.verificationCodeExpires < Date.now()) {
       pendingVerifications.delete(tempUserId)
-      return res.status(400).json({
-        success: false,
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'Verification code expired',
       })
     }
 
     if (pendingUser.verificationCode !== verificationCode) {
-      return res.status(400).json({
-        success: false,
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'Invalid verification code',
       })
     }
@@ -104,8 +99,7 @@ export const verifyEmail = async (req, res) => {
 
     const token = generateToken(user._id)
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: 'Email verified and registration completed',
       token,
       user: {
@@ -114,8 +108,7 @@ export const verifyEmail = async (req, res) => {
       },
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -128,31 +121,27 @@ export const login = async (req, res) => {
 
     const user = await UserModel.findOne({ email }).select('+password')
     if (!user) {
-      return res.status(401).json({
-        success: false,
+      return res.status(StatusCodes.UNAUTHORIZED).json({
         message: 'Invalid credentials',
       })
     }
 
     if (!user.isVerified) {
-      return res.status(401).json({
-        success: false,
+      return res.status(StatusCodes.UNAUTHORIZED).json({
         message: 'Please verify your email first',
       })
     }
 
     const isMatch = await user.matchPassword(password)
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
+      return res.status(StatusCodes.UNAUTHORIZED).json({
         message: 'Invalid credentials',
       })
     }
 
     const token = generateToken(user._id)
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       token,
       user: {
         id: user._id,
@@ -161,8 +150,7 @@ export const login = async (req, res) => {
       },
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -173,8 +161,7 @@ export const getMe = async (req, res) => {
   try {
     const user = await UserModel.findById(req.user._id)
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       user: {
         id: user._id,
         email: user.email,
@@ -186,8 +173,7 @@ export const getMe = async (req, res) => {
       },
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -200,8 +186,7 @@ export const updateProfile = async (req, res) => {
   try {
     const currentUser = await UserModel.findById(req.user._id)
     if (!currentUser) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'User not found',
       })
     }
@@ -235,8 +220,7 @@ export const updateProfile = async (req, res) => {
       runValidators: true,
     })
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       user: {
         id: user._id,
         email: user.email,
@@ -259,8 +243,7 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -287,13 +270,11 @@ export const deleteProfilePicture = async (req, res) => {
     user.profilePicture = ''
     await user.save()
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: 'Profile picture deleted successfully',
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -302,13 +283,11 @@ export const deleteProfilePicture = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: 'Successfully logged out',
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
@@ -320,8 +299,7 @@ export const deleteAccount = async (req, res) => {
     const user = await UserModel.findById(req.user._id)
     
     if (!user) {
-      return res.status(404).json({
-        success: false,
+      return res.status(StatusCodes.NOT_FOUND).json({
         message: 'User not found',
       })
     }
@@ -345,13 +323,11 @@ export const deleteAccount = async (req, res) => {
 
     await user.deleteOne()
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       message: 'Account deleted successfully',
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })

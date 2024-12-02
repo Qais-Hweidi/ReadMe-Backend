@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import BookModel from '../models/BookModel.js'
 import AuthorModel from '../models/AuthorModel.js'
 import { config } from '../../config/config.js'
@@ -7,8 +8,7 @@ export const searchAll = async (req, res) => {
     const { query } = req.query
 
     if (!query) {
-      return res.status(400).json({
-        success: false,
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'Search query is required',
       })
     }
@@ -56,8 +56,7 @@ export const searchAll = async (req, res) => {
       .populate('authors', 'fullName profilePicture')
       .sort({ createdAt: -1 })
 
-    res.json({
-      success: true,
+    res.status(StatusCodes.OK).json({
       results: {
         authors: {
           count: authors.length,
@@ -70,8 +69,7 @@ export const searchAll = async (req, res) => {
       },
     })
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })
