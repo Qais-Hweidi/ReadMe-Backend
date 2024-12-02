@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
     fullName: {
       type: String,
     },
@@ -33,6 +37,18 @@ const userSchema = new mongoose.Schema(
     profilePicture: {
       type: String,
       default: '',
+    },
+    subscriptionStatus: {
+      type: String,
+      enum: ['active', 'inactive', 'expired'],
+      default: 'inactive',
+    },
+    subscriptionPlanId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SubscriptionPlan',
+    },
+    subscriptionExpiryDate: {
+      type: Date,
     },
   },
   {
@@ -50,6 +66,10 @@ userSchema.pre('save', async function (next) {
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password)
+}
+
+userSchema.methods.hasActiveSubscription = function () {
+  return this.subscriptionStatus === 'active' && this.subscriptionExpiryDate > new Date()
 }
 
 export default mongoose.model('User', userSchema)

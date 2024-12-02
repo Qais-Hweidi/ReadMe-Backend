@@ -11,7 +11,10 @@ import { createReviewValidation, updateReviewValidation } from '../validations/R
 
 const router = express.Router({ mergeParams: true })
 
+// Public Routes
 router.get('/', getBookReviews)
+
+// User Routes (Protected)
 router.post('/', protect, validate(createReviewValidation), createReview)
 router.put('/:reviewId', protect, validate(updateReviewValidation), updateReview)
 router.delete('/:reviewId', protect, deleteReview)

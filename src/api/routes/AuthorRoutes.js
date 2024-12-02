@@ -8,22 +8,23 @@ import {
   toggleAuthorVisibility,
   getAuthorsWithBookCount,
 } from '../controllers/AuthorController.js'
-import { protect } from '../middlewares/AuthMiddleware.js'
+import { protect, admin } from '../middlewares/AuthMiddleware.js'
 import { upload } from '../middlewares/uploadMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
 import { createAuthorValidation, updateAuthorValidation } from '../validations/AuthorValidation.js'
 
 const router = express.Router()
 
-// Public routes
+// Public Routes
 router.get('/', getAuthors)
 router.get('/with-book-count', getAuthorsWithBookCount)
 router.get('/:id', getAuthorById)
 
-// Protected routes
+// Admin Routes
 router.post(
   '/',
   protect,
+  admin,
   upload.single('profilePicture'),
   validate(createAuthorValidation),
   createAuthor
@@ -31,11 +32,12 @@ router.post(
 router.put(
   '/:id',
   protect,
+  admin,
   upload.single('profilePicture'),
   validate(updateAuthorValidation),
   updateAuthor
 )
-router.delete('/:id', protect, deleteAuthor)
-router.patch('/:id/visibility', protect, toggleAuthorVisibility)
+router.delete('/:id', protect, admin, deleteAuthor)
+router.patch('/:id/visibility', protect, admin, toggleAuthorVisibility)
 
 export default router

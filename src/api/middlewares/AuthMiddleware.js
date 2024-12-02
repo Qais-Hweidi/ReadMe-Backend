@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 import { config } from '../../config/config.js'
 import UserModel from '../models/UserModel.js'
+import { StatusCodes } from 'http-status-codes'
 
 export const protect = async (req, res, next) => {
   try {
@@ -11,8 +12,7 @@ export const protect = async (req, res, next) => {
     }
 
     if (!token) {
-      return res.status(401).json({
-        success: false,
+      return res.status(StatusCodes.UNAUTHORIZED).json({
         message: 'Not authorized to access this route',
       })
     }
@@ -22,14 +22,29 @@ export const protect = async (req, res, next) => {
       req.user = await UserModel.findById(decoded.id)
       next()
     } catch (error) {
-      return res.status(401).json({
-        success: false,
+      return res.status(StatusCodes.UNAUTHORIZED).json({
         message: 'Not authorized to access this route',
       })
     }
   } catch (error) {
-    res.status(500).json({
-      success: false,
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const admin = async (req, res, next) => {
+  try {
+    // req.user is set by the protect middleware
+    if (!req.user?.isAdmin) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        message: 'Admin access required for this route',
+      })
+    }
+    next()
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
     })

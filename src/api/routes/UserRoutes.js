@@ -21,13 +21,13 @@ import { updateProfileValidation } from '../validations/UserValidation.js'
 
 const router = express.Router()
 
-// Registration and login routes
+// Public Routes (Auth)
 router.post('/auth/register', validate(registerValidation), register)
 router.post('/auth/login', validate(loginValidation), login)
 router.post('/auth/verify-email', validate(verifyEmailValidation), verifyEmail)
-router.post('/auth/logout', protect, logout)
 
-// User profile routes
+// User Routes (Protected)
+// Profile Management
 router.get('/me', protect, getMe)
 router.put(
   '/profile',
@@ -38,5 +38,6 @@ router.put(
 )
 router.delete('/profile/picture', protect, deleteProfilePicture)
 router.delete('/account', protect, deleteAccount)
+router.post('/auth/logout', protect, logout)
 
 export default router

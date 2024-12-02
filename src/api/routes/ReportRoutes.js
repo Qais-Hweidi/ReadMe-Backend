@@ -1,6 +1,6 @@
 import express from 'express'
 import { createReport, getReports, updateReportStatus } from '../controllers/ReportController.js'
-import { protect } from '../middlewares/AuthMiddleware.js'
+import { protect, admin } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
 import {
   createReportValidation,
@@ -9,11 +9,15 @@ import {
 
 const router = express.Router({ mergeParams: true })
 
+// User Routes (Protected)
 router.post('/', protect, validate(createReportValidation), createReport)
-router.get('/', protect, getReports)
+
+// Admin Routes
+router.get('/', protect, admin, getReports)
 router.patch(
   '/:reportId/status',
   protect,
+  admin,
   validate(updateReportStatusValidation),
   updateReportStatus
 )
