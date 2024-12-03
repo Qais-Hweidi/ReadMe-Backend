@@ -11,29 +11,88 @@ import {
   toggleBookFavorite,
   toggleBookVisibility,
   checkBookAccess,
+  checkPurchaseStatus,
+  purchaseBook,
+  getPurchasedBooks,
 } from '../controllers/BookController.js'
 import { protect, admin } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
 import { upload } from '../middlewares/uploadMiddleware.js'
 import { createBookValidation, updateBookValidation } from '../validations/BookValidation.js'
+import {
+  purchaseBookValidation,
+  bookIdParamValidation,
+} from '../validations/BookPurchaseValidation.js'
 
 const router = express.Router()
 
 // Public Routes
 router.get('/', getBooks)
-router.get('/:id', getBookById)
-router.post('/:id/view', incrementBookViews)
 
-// User Routes (Protected)
-router.get('/:id/access', protect, checkBookAccess)
-router.post('/:id/download', protect, incrementBookDownloads)
-router.post('/:id/read', protect, incrementBookReadings)
-router.post('/:id/favorite', protect, toggleBookFavorite)
+// User Routes (Protected) - Fixed order
+router.get('/purchased', protect, getPurchasedBooks)
+
+// Routes with :bookId parameter
+router.get('/:bookId', validate(bookIdParamValidation, 'params'), getBookById)
+router.post('/:bookId/view', validate(bookIdParamValidation, 'params'), incrementBookViews)
+router.get('/:bookId/access', protect, validate(bookIdParamValidation, 'params'), checkBookAccess)
+router.get(
+  '/:bookId/purchase-status',
+  protect,
+  validate(bookIdParamValidation, 'params'),
+  checkPurchaseStatus
+)
+router.post(
+  '/:bookId/purchase',
+  protect,
+  validate(bookIdParamValidation, 'params'),
+  validate(purchaseBookValidation, 'body'),
+  purchaseBook
+)
+router.post(
+  '/:bookId/download',
+  protect,
+  validate(bookIdParamValidation, 'params'),
+  incrementBookDownloads
+)
+router.post(
+  '/:bookId/read',
+  protect,
+  validate(bookIdParamValidation, 'params'),
+  incrementBookReadings
+)
+router.post(
+  '/:bookId/favorite',
+  protect,
+  validate(bookIdParamValidation, 'params'),
+  toggleBookFavorite
+)
 
 // Admin Routes
-router.post('/', protect, admin, upload.single('image'), validate(createBookValidation), createBook)
-router.put('/:id', protect, admin, upload.single('image'), validate(updateBookValidation), updateBook)
-router.delete('/:id', protect, admin, deleteBook)
-router.patch('/:id/visibility', protect, admin, toggleBookVisibility)
+router.post(
+  '/',
+  protect,
+  admin,
+  upload.single('image'),
+  validate(createBookValidation, 'body'),
+  createBook
+)
+router.put(
+  '/:bookId',
+  protect,
+  admin,
+  upload.single('image'),
+  validate(bookIdParamValidation, 'params'),
+  validate(updateBookValidation, 'body'),
+  updateBook
+)
+router.delete('/:bookId', protect, admin, validate(bookIdParamValidation, 'params'), deleteBook)
+router.patch(
+  '/:bookId/visibility',
+  protect,
+  admin,
+  validate(bookIdParamValidation, 'params'),
+  toggleBookVisibility
+)
 
 export default router

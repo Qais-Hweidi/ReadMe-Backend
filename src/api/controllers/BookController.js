@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import BookModel from '../models/BookModel.js'
+import PurchasedBooks from '../models/PurchasedBooksModel.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
 
@@ -7,13 +8,204 @@ import { cloudinary } from '../../config/cloudinaryConfig.js'
 const canAccessPremiumBook = async (user, book) => {
   if (book.free) return true
   if (!user) return false
+
+  // Check if user has purchased this book
+  const hasPurchased = await PurchasedBooks.findOne({ user: user._id, book: book._id })
+  if (hasPurchased) return true
+
+  // If not purchased, check subscription
   return user.subscriptionStatus === 'active' && user.subscriptionExpiryDate > new Date()
+}
+
+// Helper function to validate book purchase eligibility
+const validatePurchaseEligibility = async (user, book, expectedPrice) => {
+  // Check if book exists and is not free
+  if (!book) {
+    return {
+      status: StatusCodes.NOT_FOUND,
+      message: 'Book not found',
+    }
+  }
+  if (book.free) {
+    return {
+      status: StatusCodes.BAD_REQUEST,
+      message: 'This book is free and does not require purchase',
+    }
+  }
+
+  // Check if book is visible/available
+  if (!book.isVisible) {
+    return {
+      status: StatusCodes.BAD_REQUEST,
+      message: 'This book is not available for purchase',
+    }
+  }
+
+  // Check if user has already purchased
+  const existingPurchase = await PurchasedBooks.findOne({
+    user: user._id,
+    book: book._id,
+  })
+  if (existingPurchase) {
+    return {
+      status: StatusCodes.BAD_REQUEST,
+      message: 'You have already purchased this book',
+    }
+  }
+
+  // Validate price if expectedPrice is provided
+  if (expectedPrice !== undefined && expectedPrice !== book.price) {
+    return {
+      status: StatusCodes.BAD_REQUEST,
+      message: 'Book price has changed. Please check the current price',
+    }
+  }
+
+  return null // No error
+}
+
+// Check if user has purchased a specific book
+export const checkPurchaseStatus = async (req, res) => {
+  try {
+    const book = await BookModel.findById(req.params.bookId)
+    if (!book) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        message: 'Book not found',
+      })
+    }
+
+    // If book is free, no need to purchase
+    if (book.free) {
+      return res.status(StatusCodes.OK).json({
+        isPurchased: true,
+        isFree: true,
+        message: 'This is a free book',
+      })
+    }
+
+    // Check if book is visible/available
+    if (!book.isVisible) {
+      return res.status(StatusCodes.OK).json({
+        isPurchased: false,
+        isFree: false,
+        canPurchase: false,
+        message: 'This book is not available for purchase',
+      })
+    }
+
+    const purchase = await PurchasedBooks.findOne({
+      user: req.user._id,
+      book: book._id,
+    })
+
+    const hasSubscriptionAccess =
+      req.user.subscriptionStatus === 'active' && req.user.subscriptionExpiryDate > new Date()
+
+    res.status(StatusCodes.OK).json({
+      isPurchased: !!purchase,
+      isFree: false,
+      price: book.price,
+      canPurchase: !purchase && !book.free,
+      hasSubscriptionAccess,
+      message: purchase
+        ? 'You own this book'
+        : hasSubscriptionAccess
+          ? 'Available through your subscription'
+          : 'Book available for purchase',
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+// Purchase a book
+export const purchaseBook = async (req, res) => {
+  try {
+    const book = await BookModel.findById(req.params.bookId)
+
+    // Validate purchase eligibility
+    const validationError = await validatePurchaseEligibility(
+      req.user,
+      book,
+      req.body.expectedPrice
+    )
+    if (validationError) {
+      return res.status(validationError.status).json({
+        message: validationError.message,
+      })
+    }
+
+    // Create purchase record
+    const purchase = await PurchasedBooks.create({
+      user: req.user._id,
+      book: book._id,
+      purchasePrice: book.price,
+    })
+
+    const populatedPurchase = await PurchasedBooks.findById(purchase._id)
+      .populate('book', 'title image authors description')
+      .populate({
+        path: 'book',
+        populate: {
+          path: 'authors',
+          select: 'fullName profilePicture',
+        },
+      })
+
+    res.status(StatusCodes.CREATED).json({
+      message: 'Book purchased successfully',
+      purchase: populatedPurchase,
+    })
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: 'You have already purchased this book',
+      })
+    }
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+// Get user's purchased books
+export const getPurchasedBooks = async (req, res) => {
+  try {
+    const purchases = await PurchasedBooks.find({ user: req.user._id })
+      .populate({
+        path: 'book',
+        select: 'title image authors description bookLink',
+        populate: {
+          path: 'authors',
+          select: 'fullName profilePicture',
+        },
+      })
+      .sort({ purchaseDate: -1 })
+
+    // Filter out books that are no longer visible (unless already purchased)
+    const visiblePurchases = purchases.filter(
+      purchase => purchase.book && (purchase.book.isVisible || purchase.purchaseDate)
+    )
+
+    res.status(StatusCodes.OK).json({
+      purchases: visiblePurchases,
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
 }
 
 // Check if user can access a specific book
 export const checkBookAccess = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.id)
+    const book = await BookModel.findById(req.params.bookId)
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
@@ -24,10 +216,10 @@ export const checkBookAccess = async (req, res) => {
     res.status(StatusCodes.OK).json({
       hasAccess,
       requiresSubscription: !book.free,
-      message: hasAccess 
-        ? 'You can access this book' 
-        : book.free 
-          ? 'This is a free book' 
+      message: hasAccess
+        ? 'You can access this book'
+        : book.free
+          ? 'This is a free book'
           : 'This book requires an active subscription',
     })
   } catch (error) {
@@ -41,10 +233,7 @@ export const checkBookAccess = async (req, res) => {
 export const getBooks = async (req, res) => {
   try {
     const books = await BookModel.find({
-      $or: [
-        { isVisible: true },
-        { isVisible: { $exists: false } }
-      ]
+      $or: [{ isVisible: true }, { isVisible: { $exists: false } }],
     })
       .populate('category', 'title')
       .populate('authors', 'fullName profilePicture')
@@ -73,11 +262,8 @@ export const getBooks = async (req, res) => {
 export const getBookById = async (req, res) => {
   try {
     const book = await BookModel.findOne({
-      _id: req.params.id,
-      $or: [
-        { isVisible: true },
-        { isVisible: { $exists: false } }
-      ]
+      _id: req.params.bookId,
+      $or: [{ isVisible: true }, { isVisible: { $exists: false } }],
     })
       .populate('category', 'title')
       .populate('authors', 'fullName bio profilePicture socialLinks')
@@ -186,7 +372,7 @@ export const createBook = async (req, res) => {
 export const updateBook = async (req, res) => {
   try {
     const updateData = { ...req.body }
-    const book = await BookModel.findById(req.params.id)
+    const book = await BookModel.findById(req.params.bookId)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -238,7 +424,7 @@ export const updateBook = async (req, res) => {
       updateData.image = uploadResult.secure_url
     }
 
-    const updatedBook = await BookModel.findByIdAndUpdate(req.params.id, updateData, {
+    const updatedBook = await BookModel.findByIdAndUpdate(req.params.bookId, updateData, {
       new: true,
       runValidators: true,
     })
@@ -258,7 +444,7 @@ export const updateBook = async (req, res) => {
 
 export const deleteBook = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.id)
+    const book = await BookModel.findById(req.params.bookId)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -294,7 +480,7 @@ export const deleteBook = async (req, res) => {
 
 export const incrementBookViews = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.id)
+    const book = await BookModel.findById(req.params.bookId)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -304,7 +490,7 @@ export const incrementBookViews = async (req, res) => {
 
     // Allow viewing book details without subscription
     const updatedBook = await BookModel.findByIdAndUpdate(
-      req.params.id,
+      req.params.bookId,
       { $inc: { numberOfViews: 1 } },
       { new: true }
     )
@@ -323,7 +509,7 @@ export const incrementBookViews = async (req, res) => {
 
 export const incrementBookDownloads = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.id)
+    const book = await BookModel.findById(req.params.bookId)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -340,7 +526,7 @@ export const incrementBookDownloads = async (req, res) => {
     }
 
     const updatedBook = await BookModel.findByIdAndUpdate(
-      req.params.id,
+      req.params.bookId,
       { $inc: { numberOfDownloads: 1 } },
       { new: true }
     )
@@ -359,7 +545,7 @@ export const incrementBookDownloads = async (req, res) => {
 
 export const incrementBookReadings = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.id)
+    const book = await BookModel.findById(req.params.bookId)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -376,7 +562,7 @@ export const incrementBookReadings = async (req, res) => {
     }
 
     const updatedBook = await BookModel.findByIdAndUpdate(
-      req.params.id,
+      req.params.bookId,
       { $inc: { numberOfReadings: 1 } },
       { new: true }
     )
@@ -395,7 +581,7 @@ export const incrementBookReadings = async (req, res) => {
 
 export const toggleBookFavorite = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.id)
+    const book = await BookModel.findById(req.params.bookId)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -405,7 +591,7 @@ export const toggleBookFavorite = async (req, res) => {
 
     // Allow favoriting even without subscription
     const updatedBook = await BookModel.findByIdAndUpdate(
-      req.params.id,
+      req.params.bookId,
       { $inc: { numberOfFavourites: 1 } },
       { new: true }
     )
@@ -424,7 +610,7 @@ export const toggleBookFavorite = async (req, res) => {
 
 export const toggleBookVisibility = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.id)
+    const book = await BookModel.findById(req.params.bookId)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
