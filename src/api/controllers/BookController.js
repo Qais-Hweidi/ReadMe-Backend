@@ -26,6 +26,15 @@ const validatePurchaseEligibility = async (user, book, expectedPrice) => {
       message: 'Book not found',
     }
   }
+
+  // Check if user has active subscription
+  if (user.subscriptionStatus === 'active' && user.subscriptionExpiryDate > new Date()) {
+    return {
+      status: StatusCodes.BAD_REQUEST,
+      message: 'You have an active subscription that gives you access to all books',
+    }
+  }
+
   if (book.free) {
     return {
       status: StatusCodes.BAD_REQUEST,
@@ -105,7 +114,7 @@ export const checkPurchaseStatus = async (req, res) => {
       isPurchased: !!purchase,
       isFree: false,
       price: book.price,
-      canPurchase: !purchase && !book.free,
+      canPurchase: !purchase && !book.free && !hasSubscriptionAccess,
       hasSubscriptionAccess,
       message: purchase
         ? 'You own this book'
