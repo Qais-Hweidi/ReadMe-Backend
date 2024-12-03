@@ -10,6 +10,7 @@ import {
   incrementBookReadings,
   toggleBookFavorite,
   toggleBookVisibility,
+  checkBookAccess,
 } from '../controllers/BookController.js'
 import { protect, admin } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
@@ -24,6 +25,7 @@ router.get('/:id', getBookById)
 router.post('/:id/view', incrementBookViews)
 
 // User Routes (Protected)
+router.get('/:id/access', protect, checkBookAccess)
 router.post('/:id/download', protect, incrementBookDownloads)
 router.post('/:id/read', protect, incrementBookReadings)
 router.post('/:id/favorite', protect, toggleBookFavorite)

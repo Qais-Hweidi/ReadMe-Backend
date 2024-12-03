@@ -3,6 +3,41 @@ import BookModel from '../models/BookModel.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
 
+// Helper function to check if user can access premium book
+const canAccessPremiumBook = async (user, book) => {
+  if (book.free) return true
+  if (!user) return false
+  return user.subscriptionStatus === 'active' && user.subscriptionExpiryDate > new Date()
+}
+
+// Check if user can access a specific book
+export const checkBookAccess = async (req, res) => {
+  try {
+    const book = await BookModel.findById(req.params.id)
+    if (!book) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        message: 'Book not found',
+      })
+    }
+
+    const hasAccess = await canAccessPremiumBook(req.user, book)
+    res.status(StatusCodes.OK).json({
+      hasAccess,
+      requiresSubscription: !book.free,
+      message: hasAccess 
+        ? 'You can access this book' 
+        : book.free 
+          ? 'This is a free book' 
+          : 'This book requires an active subscription',
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
 export const getBooks = async (req, res) => {
   try {
     const books = await BookModel.find({
@@ -15,8 +50,17 @@ export const getBooks = async (req, res) => {
       .populate('authors', 'fullName profilePicture')
       .sort({ createdAt: -1 })
 
+    // Modify book data based on user's subscription status
+    const modifiedBooks = books.map(book => {
+      const bookObj = book.toObject()
+      if (!book.free && (!req.user || req.user.subscriptionStatus !== 'active')) {
+        delete bookObj.bookLink // Remove download link for premium books
+      }
+      return bookObj
+    })
+
     res.status(StatusCodes.OK).json({
-      books,
+      books: modifiedBooks,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -44,8 +88,18 @@ export const getBookById = async (req, res) => {
       })
     }
 
+    // Convert to plain object to modify
+    const bookObj = book.toObject()
+
+    // Check if user can access premium content
+    const hasAccess = await canAccessPremiumBook(req.user, book)
+    if (!hasAccess) {
+      delete bookObj.bookLink // Remove download link for premium books
+    }
+
     res.status(StatusCodes.OK).json({
-      book,
+      book: bookObj,
+      hasAccess,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -67,10 +121,8 @@ export const createBook = async (req, res) => {
     let authorIds = []
     if (typeof req.body.authors === 'string') {
       try {
-        // Try to parse as JSON array first
         authorIds = JSON.parse(req.body.authors)
       } catch (e) {
-        // If parsing fails, treat it as a single ID
         authorIds = [req.body.authors]
       }
     } else if (Array.isArray(req.body.authors)) {
@@ -79,7 +131,6 @@ export const createBook = async (req, res) => {
       authorIds = [req.body.authors]
     }
 
-    // Ensure authorIds is an array
     if (!Array.isArray(authorIds)) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'Authors must be provided as an array or single ID',
@@ -94,11 +145,28 @@ export const createBook = async (req, res) => {
       resource_type: 'auto',
     })
 
-    const book = await BookModel.create({
+    // Ensure free and price fields are properly set
+    const bookData = {
       ...req.body,
       authors: authorIds,
       image: uploadResult.secure_url,
-    })
+      free: req.body.free === 'true',
+    }
+
+    // If book is free, remove price
+    if (bookData.free) {
+      delete bookData.price
+    } else {
+      // Ensure price is set for non-free books
+      if (!bookData.price) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Price is required for premium books',
+        })
+      }
+      bookData.price = Number(bookData.price)
+    }
+
+    const book = await BookModel.create(bookData)
 
     const populatedBook = await BookModel.findById(book._id)
       .populate('category', 'title')
@@ -108,7 +176,6 @@ export const createBook = async (req, res) => {
       book: populatedBook,
     })
   } catch (error) {
-    console.error('Create book error:', error)
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Server error',
       error: config.env === 'development' ? error.message : undefined,
@@ -227,11 +294,7 @@ export const deleteBook = async (req, res) => {
 
 export const incrementBookViews = async (req, res) => {
   try {
-    const book = await BookModel.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { numberOfViews: 1 } },
-      { new: true }
-    )
+    const book = await BookModel.findById(req.params.id)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -239,9 +302,16 @@ export const incrementBookViews = async (req, res) => {
       })
     }
 
+    // Allow viewing book details without subscription
+    const updatedBook = await BookModel.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { numberOfViews: 1 } },
+      { new: true }
+    )
+
     res.status(StatusCodes.OK).json({
       message: 'Views incremented successfully',
-      numberOfViews: book.numberOfViews,
+      numberOfViews: updatedBook.numberOfViews,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -253,11 +323,7 @@ export const incrementBookViews = async (req, res) => {
 
 export const incrementBookDownloads = async (req, res) => {
   try {
-    const book = await BookModel.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { numberOfDownloads: 1 } },
-      { new: true }
-    )
+    const book = await BookModel.findById(req.params.id)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -265,9 +331,23 @@ export const incrementBookDownloads = async (req, res) => {
       })
     }
 
+    // Check if user can access the book
+    const hasAccess = await canAccessPremiumBook(req.user, book)
+    if (!hasAccess) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        message: 'This book requires an active subscription to download',
+      })
+    }
+
+    const updatedBook = await BookModel.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { numberOfDownloads: 1 } },
+      { new: true }
+    )
+
     res.status(StatusCodes.OK).json({
       message: 'Downloads incremented successfully',
-      numberOfDownloads: book.numberOfDownloads,
+      numberOfDownloads: updatedBook.numberOfDownloads,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -279,11 +359,7 @@ export const incrementBookDownloads = async (req, res) => {
 
 export const incrementBookReadings = async (req, res) => {
   try {
-    const book = await BookModel.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { numberOfReadings: 1 } },
-      { new: true }
-    )
+    const book = await BookModel.findById(req.params.id)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -291,9 +367,23 @@ export const incrementBookReadings = async (req, res) => {
       })
     }
 
+    // Check if user can access the book
+    const hasAccess = await canAccessPremiumBook(req.user, book)
+    if (!hasAccess) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        message: 'This book requires an active subscription to read',
+      })
+    }
+
+    const updatedBook = await BookModel.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { numberOfReadings: 1 } },
+      { new: true }
+    )
+
     res.status(StatusCodes.OK).json({
       message: 'Readings incremented successfully',
-      numberOfReadings: book.numberOfReadings,
+      numberOfReadings: updatedBook.numberOfReadings,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -305,11 +395,7 @@ export const incrementBookReadings = async (req, res) => {
 
 export const toggleBookFavorite = async (req, res) => {
   try {
-    const book = await BookModel.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { numberOfFavourites: 1 } },
-      { new: true }
-    )
+    const book = await BookModel.findById(req.params.id)
 
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -317,9 +403,16 @@ export const toggleBookFavorite = async (req, res) => {
       })
     }
 
+    // Allow favoriting even without subscription
+    const updatedBook = await BookModel.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { numberOfFavourites: 1 } },
+      { new: true }
+    )
+
     res.status(StatusCodes.OK).json({
       message: 'Favourites toggled successfully',
-      numberOfFavourites: book.numberOfFavourites,
+      numberOfFavourites: updatedBook.numberOfFavourites,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({

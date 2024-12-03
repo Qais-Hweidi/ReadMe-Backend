@@ -6,7 +6,7 @@ import { StatusCodes } from 'http-status-codes'
 export const subscribeToPlan = async (req, res) => {
   try {
     const { planId } = req.body
-    const userId = req.user._id // from auth middleware
+    const userId = req.user._id
 
     // Find the subscription plan
     const plan = await SubscriptionPlan.findById(planId)
@@ -16,12 +16,23 @@ export const subscribeToPlan = async (req, res) => {
       })
     }
 
-    // Calculate expiry date
-    const expiryDate = new Date()
+    // Check if user has an active subscription
+    const user = await User.findById(userId)
+    const now = new Date()
+    let expiryDate = new Date()
+
+    if (user.subscriptionStatus === 'active' && user.subscriptionExpiryDate > now) {
+      // If renewing the same plan, extend the current expiry date
+      if (user.subscriptionPlanId?.toString() === planId) {
+        expiryDate = new Date(user.subscriptionExpiryDate)
+      }
+    }
+
+    // Calculate new expiry date
     expiryDate.setDate(expiryDate.getDate() + plan.durationInDays)
 
     // Update user's subscription
-    const user = await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       userId,
       {
         subscriptionStatus: 'active',
@@ -34,9 +45,9 @@ export const subscribeToPlan = async (req, res) => {
     res.status(StatusCodes.OK).json({
       message: 'Successfully subscribed to plan',
       subscription: {
-        status: user.subscriptionStatus,
+        status: updatedUser.subscriptionStatus,
         plan: plan.planName,
-        expiryDate: user.subscriptionExpiryDate,
+        expiryDate: updatedUser.subscriptionExpiryDate,
       },
     })
   } catch (error) {
@@ -50,7 +61,7 @@ export const subscribeToPlan = async (req, res) => {
 // Get current user's subscription details
 export const getSubscriptionDetails = async (req, res) => {
   try {
-    const userId = req.user._id // from auth middleware
+    const userId = req.user._id
 
     const user = await User.findById(userId)
       .select('subscriptionStatus subscriptionExpiryDate')
@@ -62,11 +73,21 @@ export const getSubscriptionDetails = async (req, res) => {
       })
     }
 
+    // Check if subscription has expired
+    if (user.subscriptionStatus === 'active' && user.subscriptionExpiryDate < new Date()) {
+      user.subscriptionStatus = 'expired'
+      await user.save()
+    }
+
     res.status(StatusCodes.OK).json({
       subscription: {
         status: user.subscriptionStatus,
         plan: user.subscriptionPlanId,
         expiryDate: user.subscriptionExpiryDate,
+        isExpired: user.subscriptionExpiryDate < new Date(),
+        daysLeft: user.subscriptionExpiryDate > new Date() 
+          ? Math.ceil((user.subscriptionExpiryDate - new Date()) / (1000 * 60 * 60 * 24))
+          : 0
       },
     })
   } catch (error) {
@@ -80,7 +101,7 @@ export const getSubscriptionDetails = async (req, res) => {
 // Cancel subscription
 export const cancelSubscription = async (req, res) => {
   try {
-    const userId = req.user._id // from auth middleware
+    const userId = req.user._id
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -104,4 +125,4 @@ export const cancelSubscription = async (req, res) => {
       error: error.message,
     })
   }
-} 
+}
