@@ -7,7 +7,7 @@ export const createSubscriptionPlanValidation = Joi.object({
     'string.max': 'Plan name cannot exceed 50 characters',
     'any.required': 'Plan name is required',
   }),
-  price: Joi.number().required().min(0).precision(1).messages({
+  price: Joi.number().required().min(0).precision(2).messages({
     'number.base': 'Price must be a number',
     'number.min': 'Price cannot be negative',
     'number.precision': 'Price can only have up to 2 decimal places',
@@ -30,7 +30,7 @@ export const updateSubscriptionPlanValidation = Joi.object({
     'string.min': 'Plan name must be at least 3 characters long',
     'string.max': 'Plan name cannot exceed 50 characters',
   }),
-  price: Joi.number().min(0).precision(1).messages({
+  price: Joi.number().min(0).precision(2).messages({
     'number.base': 'Price must be a number',
     'number.min': 'Price cannot be negative',
     'number.precision': 'Price can only have up to 2 decimal places',

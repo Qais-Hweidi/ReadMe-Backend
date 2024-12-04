@@ -3,6 +3,7 @@ import BookModel from '../models/BookModel.js'
 import PurchasedBooks from '../models/PurchasedBooksModel.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
+import Transaction from '../models/TransactionModel.js'
 
 // Helper function to check if user can access premium book
 const canAccessPremiumBook = async (user, book) => {
@@ -133,28 +134,63 @@ export const checkPurchaseStatus = async (req, res) => {
 // Purchase a book
 export const purchaseBook = async (req, res) => {
   try {
-    const book = await BookModel.findById(req.params.bookId)
+    const { bookId } = req.params
+    const { expectedPrice } = req.body
+    const userId = req.user._id
 
-    // Validate purchase eligibility
-    const validationError = await validatePurchaseEligibility(
-      req.user,
-      book,
-      req.body.expectedPrice
-    )
-    if (validationError) {
-      return res.status(validationError.status).json({
-        message: validationError.message,
+    // Check if book exists and is visible
+    const book = await BookModel.findOne({ _id: bookId, isVisible: true })
+    if (!book) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        message: 'Book not found',
       })
     }
 
-    // Create purchase record
-    const purchase = await PurchasedBooks.create({
-      user: req.user._id,
-      book: book._id,
+    // Check if user has already purchased the book
+    const existingPurchase = await PurchasedBooksModel.findOne({
+      user: userId,
+      book: bookId,
+    })
+
+    if (existingPurchase) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: 'You have already purchased this book',
+      })
+    }
+
+    // Validate price if provided
+    if (expectedPrice !== undefined && expectedPrice !== book.price) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: 'Book price has changed',
+        currentPrice: book.price,
+      })
+    }
+
+    // Create a completed transaction (temporary until payment gateway is implemented)
+    const transaction = await Transaction.create({
+      user: userId,
+      type: 'BOOK_PURCHASE',
+      referenceId: bookId,
+      referenceModel: 'Book',
+      amount: book.price,
+      currency: 'USD',
+      paymentMethod: req.body.paymentMethod || 'CREDIT_CARD',
+      status: 'COMPLETED', // Auto-complete for now
+      paymentGateway: {
+        transactionId: `temp_${Date.now()}`, // Temporary transaction ID
+        receiptUrl: null,
+        gatewayResponse: { message: 'Auto-completed transaction' }
+      }
+    })
+
+    // Add book to user's purchased books immediately
+    const purchase = await PurchasedBooksModel.create({
+      user: userId,
+      book: bookId,
       purchasePrice: book.price,
     })
 
-    const populatedPurchase = await PurchasedBooks.findById(purchase._id)
+    const populatedPurchase = await PurchasedBooksModel.findById(purchase._id)
       .populate('book', 'title image authors description')
       .populate({
         path: 'book',
@@ -164,19 +200,19 @@ export const purchaseBook = async (req, res) => {
         },
       })
 
-    res.status(StatusCodes.CREATED).json({
+    res.status(StatusCodes.OK).json({
       message: 'Book purchased successfully',
-      purchase: populatedPurchase,
+      transaction: {
+        id: transaction._id,
+        amount: transaction.amount,
+        status: transaction.status,
+      },
+      purchase: populatedPurchase
     })
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: 'You have already purchased this book',
-      })
-    }
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      message: 'Server error',
-      error: config.env === 'development' ? error.message : undefined,
+      message: 'Error processing book purchase',
+      error: error.message,
     })
   }
 }

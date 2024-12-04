@@ -1,5 +1,6 @@
 import User from '../models/UserModel.js'
 import SubscriptionPlan from '../models/SubscriptionPlanModel.js'
+import Transaction from '../models/TransactionModel.js'
 import { StatusCodes } from 'http-status-codes'
 
 // Subscribe user to a plan
@@ -16,43 +17,64 @@ export const subscribeToPlan = async (req, res) => {
       })
     }
 
-    // Check if user has an active subscription
-    const user = await User.findById(userId)
     const now = new Date()
-    let expiryDate = new Date()
+    const expiryDate = new Date(now.getTime() + plan.durationInDays * 24 * 60 * 60 * 1000)
 
-    if (user.subscriptionStatus === 'active' && user.subscriptionExpiryDate > now) {
-      // If renewing the same plan, extend the current expiry date
-      if (user.subscriptionPlanId?.toString() === planId) {
-        expiryDate = new Date(user.subscriptionExpiryDate)
+    // Create a completed transaction (temporary until payment gateway is implemented)
+    const transaction = await Transaction.create({
+      user: userId,
+      type: 'SUBSCRIPTION',
+      referenceId: planId,
+      referenceModel: 'SubscriptionPlan',
+      amount: plan.price,
+      currency: 'USD',
+      paymentMethod: req.body.paymentMethod || 'CREDIT_CARD',
+      status: 'COMPLETED', // Auto-complete for now
+      subscriptionPeriod: {
+        startDate: now,
+        endDate: expiryDate,
+      },
+      paymentGateway: {
+        transactionId: `temp_${Date.now()}`, // Temporary transaction ID
+        receiptUrl: null,
+        gatewayResponse: { message: 'Auto-completed transaction' }
       }
+    })
+
+    // Activate the subscription immediately
+    const user = await User.findById(userId)
+    
+    // If user has active subscription of same plan, extend it
+    if (user.subscriptionStatus === 'active' && 
+        user.subscriptionPlanId?.toString() === planId &&
+        user.subscriptionExpiryDate > now) {
+      expiryDate.setTime(user.subscriptionExpiryDate.getTime() + (plan.durationInDays * 24 * 60 * 60 * 1000))
     }
 
-    // Calculate new expiry date
-    expiryDate.setDate(expiryDate.getDate() + plan.durationInDays)
-
     // Update user's subscription
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      {
-        subscriptionStatus: 'active',
-        subscriptionPlanId: planId,
-        subscriptionExpiryDate: expiryDate,
-      },
-      { new: true }
-    ).select('-password')
+    await User.findByIdAndUpdate(userId, {
+      subscriptionStatus: 'active',
+      subscriptionPlanId: planId,
+      subscriptionExpiryDate: expiryDate,
+    })
 
     res.status(StatusCodes.OK).json({
       message: 'Successfully subscribed to plan',
-      subscription: {
-        status: updatedUser.subscriptionStatus,
-        plan: plan.planName,
-        expiryDate: updatedUser.subscriptionExpiryDate,
+      transaction: {
+        id: transaction._id,
+        amount: transaction.amount,
+        status: transaction.status,
+        subscriptionPeriod: transaction.subscriptionPeriod,
       },
+      subscription: {
+        plan: plan.planName,
+        status: 'active',
+        expiryDate: expiryDate,
+      }
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      message: 'Error subscribing to plan',
+      message: 'Error processing subscription',
       error: error.message,
     })
   }

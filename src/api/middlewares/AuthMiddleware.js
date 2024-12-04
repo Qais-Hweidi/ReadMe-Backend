@@ -19,7 +19,19 @@ export const protect = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, config.jwt.secret)
-      req.user = await UserModel.findById(decoded.id)
+      
+      const user = await UserModel.findById(decoded.id)
+        .select('_id email fullName')
+      
+      if (!user) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+          message: 'User not found',
+        })
+      }
+
+      user.isAdmin = !!decoded.isAdmin
+      
+      req.user = user
       next()
     } catch (error) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -36,8 +48,7 @@ export const protect = async (req, res, next) => {
 
 export const admin = async (req, res, next) => {
   try {
-    // req.user is set by the protect middleware
-    if (!req.user?.isAdmin) {
+    if (!req.user || req.user.isAdmin !== true) {
       return res.status(StatusCodes.FORBIDDEN).json({
         message: 'Admin access required for this route',
       })

@@ -11,8 +11,8 @@ import ReportModel from '../models/ReportModel.js'
 
 const pendingVerifications = new Map()
 
-const generateToken = userId => {
-  return jwt.sign({ id: userId }, config.jwt.secret, {
+const generateToken = (userId, isAdmin) => {
+  return jwt.sign({ id: userId, isAdmin }, config.jwt.secret, {
     expiresIn: '90d', // keep it long for now
   })
 }
@@ -119,7 +119,7 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body
 
-    const user = await UserModel.findOne({ email }).select('+password')
+    const user = await UserModel.findOne({ email }).select('+password +isAdmin')
     if (!user) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         message: 'Invalid credentials',
@@ -139,7 +139,9 @@ export const login = async (req, res) => {
       })
     }
 
-    const token = generateToken(user._id)
+    user.isAdmin = !!user.isAdmin
+
+    const token = generateToken(user._id, user.isAdmin)
 
     res.status(StatusCodes.OK).json({
       token,

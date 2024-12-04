@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema(
     isAdmin: {
       type: Boolean,
       default: false,
+      select: true,
     },
     fullName: {
       type: String,
