@@ -1,9 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 import BookModel from '../models/BookModel.js'
 import PurchasedBooks from '../models/PurchasedBooksModel.js'
+import Transaction from '../models/TransactionModel.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
-import Transaction from '../models/TransactionModel.js'
 
 // Helper function to check if user can access premium book
 const canAccessPremiumBook = async (user, book) => {
@@ -135,11 +135,14 @@ export const checkPurchaseStatus = async (req, res) => {
 export const purchaseBook = async (req, res) => {
   try {
     const { bookId } = req.params
-    const { expectedPrice } = req.body
     const userId = req.user._id
 
     // Check if book exists and is visible
-    const book = await BookModel.findOne({ _id: bookId, isVisible: true })
+    const book = await BookModel.findOne({
+      _id: bookId,
+      $or: [{ isVisible: true }, { isVisible: { $exists: false } }],
+    })
+
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Book not found',
@@ -147,7 +150,7 @@ export const purchaseBook = async (req, res) => {
     }
 
     // Check if user has already purchased the book
-    const existingPurchase = await PurchasedBooksModel.findOne({
+    const existingPurchase = await PurchasedBooks.findOne({
       user: userId,
       book: bookId,
     })
@@ -155,14 +158,6 @@ export const purchaseBook = async (req, res) => {
     if (existingPurchase) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'You have already purchased this book',
-      })
-    }
-
-    // Validate price if provided
-    if (expectedPrice !== undefined && expectedPrice !== book.price) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        message: 'Book price has changed',
-        currentPrice: book.price,
       })
     }
 
@@ -174,23 +169,23 @@ export const purchaseBook = async (req, res) => {
       referenceModel: 'Book',
       amount: book.price,
       currency: 'USD',
-      paymentMethod: req.body.paymentMethod || 'CREDIT_CARD',
+      paymentMethod: 'CREDIT_CARD',
       status: 'COMPLETED', // Auto-complete for now
       paymentGateway: {
         transactionId: `temp_${Date.now()}`, // Temporary transaction ID
         receiptUrl: null,
-        gatewayResponse: { message: 'Auto-completed transaction' }
-      }
+        gatewayResponse: { message: 'Auto-completed transaction' },
+      },
     })
 
     // Add book to user's purchased books immediately
-    const purchase = await PurchasedBooksModel.create({
+    const purchase = await PurchasedBooks.create({
       user: userId,
       book: bookId,
       purchasePrice: book.price,
     })
 
-    const populatedPurchase = await PurchasedBooksModel.findById(purchase._id)
+    const populatedPurchase = await PurchasedBooks.findById(purchase._id)
       .populate('book', 'title image authors description')
       .populate({
         path: 'book',
@@ -207,12 +202,12 @@ export const purchaseBook = async (req, res) => {
         amount: transaction.amount,
         status: transaction.status,
       },
-      purchase: populatedPurchase
+      purchase: populatedPurchase,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Error processing book purchase',
-      error: error.message,
+      error: config.env === 'development' ? error.message : undefined,
     })
   }
 }
@@ -457,7 +452,7 @@ export const updateBook = async (req, res) => {
         try {
           await cloudinary.uploader.destroy(oldPublicId)
         } catch (error) {
-          console.error('Error deleting old book image:', error)
+          // Silently handle cloudinary deletion error
         }
       }
 
@@ -506,7 +501,7 @@ export const deleteBook = async (req, res) => {
       try {
         await cloudinary.uploader.destroy(publicId)
       } catch (error) {
-        console.error('Error deleting book image:', error)
+        // Silently handle cloudinary deletion error
       }
     }
 
