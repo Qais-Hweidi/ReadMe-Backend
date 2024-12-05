@@ -12,7 +12,17 @@ const router = express.Router()
 
 // User Routes (Protected)
 router.get('/', protect, getFavorites)
-router.get('/books/:bookId/status', protect, validate(favoriteValidation), checkFavoriteStatus)
-router.post('/books/:bookId', protect, validate(favoriteValidation), toggleFavorite)
+router.get(
+  '/books/:bookId/status',
+  protect,
+  validate(favoriteValidation.params, 'params'),
+  checkFavoriteStatus
+)
+router.post(
+  '/books/:bookId',
+  protect,
+  validate(favoriteValidation.params, 'params'),
+  toggleFavorite
+)
 
-export default router 
+export default router

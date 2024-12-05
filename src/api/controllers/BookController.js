@@ -619,35 +619,6 @@ export const incrementBookReadings = async (req, res) => {
   }
 }
 
-export const toggleBookFavorite = async (req, res) => {
-  try {
-    const book = await BookModel.findById(req.params.bookId)
-
-    if (!book) {
-      return res.status(StatusCodes.NOT_FOUND).json({
-        message: 'Book not found',
-      })
-    }
-
-    // Allow favoriting even without subscription
-    const updatedBook = await BookModel.findByIdAndUpdate(
-      req.params.bookId,
-      { $inc: { numberOfFavourites: 1 } },
-      { new: true }
-    )
-
-    res.status(StatusCodes.OK).json({
-      message: 'Favourites toggled successfully',
-      numberOfFavourites: updatedBook.numberOfFavourites,
-    })
-  } catch (error) {
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      message: 'Server error',
-      error: config.env === 'development' ? error.message : undefined,
-    })
-  }
-}
-
 export const toggleBookVisibility = async (req, res) => {
   try {
     const book = await BookModel.findById(req.params.bookId)

@@ -91,4 +91,4 @@ export const checkFavoriteStatus = async (req, res) => {
       error: config.env === 'development' ? error.message : undefined,
     })
   }
-} 
+}

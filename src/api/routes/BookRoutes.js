@@ -8,7 +8,6 @@ import {
   incrementBookViews,
   incrementBookDownloads,
   incrementBookReadings,
-  toggleBookFavorite,
   toggleBookVisibility,
   checkBookAccess,
   checkPurchaseStatus,
@@ -60,12 +59,6 @@ router.post(
   protect,
   validate(bookIdParamValidation, 'params'),
   incrementBookReadings
-)
-router.post(
-  '/:bookId/favorite',
-  protect,
-  validate(bookIdParamValidation, 'params'),
-  toggleBookFavorite
 )
 
 // Admin Routes
