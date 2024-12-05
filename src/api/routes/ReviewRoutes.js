@@ -15,8 +15,25 @@ const router = express.Router({ mergeParams: true })
 router.get('/', getBookReviews)
 
 // User Routes (Protected)
-router.post('/', protect, validate(createReviewValidation), createReview)
-router.put('/:reviewId', protect, validate(updateReviewValidation), updateReview)
-router.delete('/:reviewId', protect, deleteReview)
+router.post(
+  '/',
+  protect,
+  validate(createReviewValidation.body),
+  validate(createReviewValidation.params, 'params'),
+  createReview
+)
+router.put(
+  '/:reviewId',
+  protect,
+  validate(updateReviewValidation.body),
+  validate(updateReviewValidation.params, 'params'),
+  updateReview
+)
+router.delete(
+  '/:reviewId',
+  protect,
+  validate(updateReviewValidation.params, 'params'),
+  deleteReview
+)
 
 export default router

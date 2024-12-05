@@ -54,6 +54,7 @@ export const updateReview = async (req, res) => {
     const review = await ReviewModel.findOne({
       _id: req.params.reviewId,
       user: req.user._id,
+      book: req.params.bookId,
     })
 
     if (!review) {
