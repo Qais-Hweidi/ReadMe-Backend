@@ -275,7 +275,26 @@ export const handlePaymentCallback = async (req, res) => {
           book: transaction.referenceId,
           purchasePrice: transaction.amount,
         })
+      } else if (transaction.type === 'SUBSCRIPTION') {
+        const user = await User.findById(transaction.user)
+        let expiryDate = transaction.subscriptionPeriod.endDate
+        
+        // If user has active subscription of same plan, extend it
+        if (user.subscriptionStatus === 'active' && 
+            user.subscriptionPlanId?.toString() === transaction.referenceId.toString() &&
+            user.subscriptionExpiryDate > new Date()) {
+          expiryDate = new Date(user.subscriptionExpiryDate.getTime())
+          expiryDate.setDate(expiryDate.getDate() + transaction.subscriptionPeriod.durationInDays)
+        }
+        
+        // Activate or extend subscription
+        await User.findByIdAndUpdate(transaction.user, {
+          subscriptionStatus: 'active',
+          subscriptionPlanId: transaction.referenceId,
+          subscriptionExpiryDate: expiryDate,
+        })
       }
+
       // Just return a success message
       return res.status(StatusCodes.OK).json({
         success: true,

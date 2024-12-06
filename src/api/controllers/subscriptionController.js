@@ -1,6 +1,8 @@
 import User from '../models/UserModel.js'
 import SubscriptionPlan from '../models/SubscriptionPlanModel.js'
 import Transaction from '../models/TransactionModel.js'
+import LahzaService from '../services/LahzaService.js'
+import { config } from '../../config/config.js'
 import { StatusCodes } from 'http-status-codes'
 
 // Subscribe user to a plan
@@ -20,7 +22,7 @@ export const subscribeToPlan = async (req, res) => {
     const now = new Date()
     const expiryDate = new Date(now.getTime() + plan.durationInDays * 24 * 60 * 60 * 1000)
 
-    // Create a completed transaction (temporary until payment gateway is implemented)
+    // Create a pending transaction
     const transaction = await Transaction.create({
       user: userId,
       type: 'SUBSCRIPTION',
@@ -28,48 +30,42 @@ export const subscribeToPlan = async (req, res) => {
       referenceModel: 'SubscriptionPlan',
       amount: plan.price,
       currency: 'USD',
-      paymentMethod: req.body.paymentMethod || 'CREDIT_CARD',
-      status: 'COMPLETED', // Auto-complete for now
+      paymentMethod: 'CREDIT_CARD',
+      status: 'PENDING',
       subscriptionPeriod: {
         startDate: now,
         endDate: expiryDate,
       },
       paymentGateway: {
-        transactionId: `temp_${Date.now()}`, // Temporary transaction ID
+        transactionId: `sub_${Date.now()}`, // Will be used as Lahza reference
         receiptUrl: null,
-        gatewayResponse: { message: 'Auto-completed transaction' }
+        gatewayResponse: null,
+      },
+    })
+
+    // Initialize Lahza payment
+    const paymentInit = await LahzaService.initializeTransaction({
+      amount: plan.price,
+      email: req.user.email,
+      reference: transaction.paymentGateway.transactionId,
+      callback_url: `${config.baseUrl}/api/v1/transactions/callback`,
+      metadata: {
+        transactionId: transaction._id.toString(),
+        type: 'SUBSCRIPTION',
+        planId: planId,
+        durationInDays: plan.durationInDays
       }
     })
 
-    // Activate the subscription immediately
-    const user = await User.findById(userId)
-    
-    // If user has active subscription of same plan, extend it
-    if (user.subscriptionStatus === 'active' && 
-        user.subscriptionPlanId?.toString() === planId &&
-        user.subscriptionExpiryDate > now) {
-      expiryDate.setTime(user.subscriptionExpiryDate.getTime() + (plan.durationInDays * 24 * 60 * 60 * 1000))
-    }
-
-    // Update user's subscription
-    await User.findByIdAndUpdate(userId, {
-      subscriptionStatus: 'active',
-      subscriptionPlanId: planId,
-      subscriptionExpiryDate: expiryDate,
-    })
-
     res.status(StatusCodes.OK).json({
-      message: 'Successfully subscribed to plan',
+      message: 'Payment initiated',
       transaction: {
         id: transaction._id,
         amount: transaction.amount,
         status: transaction.status,
-        subscriptionPeriod: transaction.subscriptionPeriod,
       },
-      subscription: {
-        plan: plan.planName,
-        status: 'active',
-        expiryDate: expiryDate,
+      payment: {
+        authorization_url: paymentInit.authorization_url
       }
     })
   } catch (error) {
