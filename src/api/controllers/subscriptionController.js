@@ -20,7 +20,8 @@ export const subscribeToPlan = async (req, res) => {
     }
 
     const now = new Date()
-    const expiryDate = new Date(now.getTime() + plan.durationInDays * 24 * 60 * 60 * 1000)
+    const expiryDate = new Date()
+    expiryDate.setDate(expiryDate.getDate() + plan.durationInDays)
 
     // Create a pending transaction
     const transaction = await Transaction.create({
@@ -35,6 +36,7 @@ export const subscribeToPlan = async (req, res) => {
       subscriptionPeriod: {
         startDate: now,
         endDate: expiryDate,
+        durationInDays: plan.durationInDays
       },
       paymentGateway: {
         transactionId: `sub_${Date.now()}`, // Will be used as Lahza reference
