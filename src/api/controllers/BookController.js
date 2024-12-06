@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import BookModel from '../models/BookModel.js'
 import PurchasedBooks from '../models/PurchasedBooksModel.js'
 import Transaction from '../models/TransactionModel.js'
+import LahzaService from '../services/LahzaService.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
 
@@ -161,7 +162,7 @@ export const purchaseBook = async (req, res) => {
       })
     }
 
-    // Create a completed transaction (temporary until payment gateway is implemented)
+    // Create a pending transaction
     const transaction = await Transaction.create({
       user: userId,
       type: 'BOOK_PURCHASE',
@@ -170,39 +171,37 @@ export const purchaseBook = async (req, res) => {
       amount: book.price,
       currency: 'USD',
       paymentMethod: 'CREDIT_CARD',
-      status: 'COMPLETED', // Auto-complete for now
+      status: 'PENDING',
       paymentGateway: {
-        transactionId: `temp_${Date.now()}`, // Temporary transaction ID
+        transactionId: `book_${Date.now()}`, // Will be updated with Lahza reference
         receiptUrl: null,
-        gatewayResponse: { message: 'Auto-completed transaction' },
+        gatewayResponse: null,
       },
     })
 
-    // Add book to user's purchased books immediately
-    const purchase = await PurchasedBooks.create({
-      user: userId,
-      book: bookId,
-      purchasePrice: book.price,
+    // Initialize Lahza payment
+    const paymentInit = await LahzaService.initializeTransaction({
+      amount: book.price,
+      email: req.user.email,
+      reference: transaction.paymentGateway.transactionId,
+      callback_url: `${config.baseUrl}/api/v1/transactions/callback`,
+      metadata: {
+        transactionId: transaction._id.toString(),
+        type: 'BOOK_PURCHASE',
+        bookId: bookId
+      }
     })
 
-    const populatedPurchase = await PurchasedBooks.findById(purchase._id)
-      .populate('book', 'title image authors description')
-      .populate({
-        path: 'book',
-        populate: {
-          path: 'authors',
-          select: 'fullName profilePicture',
-        },
-      })
-
     res.status(StatusCodes.OK).json({
-      message: 'Book purchased successfully',
+      message: 'Payment initiated',
       transaction: {
         id: transaction._id,
         amount: transaction.amount,
         status: transaction.status,
       },
-      purchase: populatedPurchase,
+      payment: {
+        authorization_url: paymentInit.authorization_url
+      }
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({

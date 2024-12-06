@@ -5,6 +5,7 @@ import {
   getTransactionById,
   updateTransactionStatus,
   getAllTransactions,
+  handlePaymentCallback,
 } from '../controllers/TransactionController.js'
 import { protect, admin } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
@@ -17,6 +18,7 @@ import {
 const router = express.Router()
 
 // User Routes (Protected)
+router.get('/callback', handlePaymentCallback)
 router.get('/', protect, validate(getTransactionsQueryValidation, 'query'), getUserTransactions)
 router.get('/:transactionId', protect, getTransactionById)
 router.post('/', protect, validate(createTransactionValidation), createTransaction)

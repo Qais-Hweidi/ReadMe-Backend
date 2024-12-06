@@ -3,6 +3,7 @@ import TransactionModel from '../models/TransactionModel.js'
 import { config } from '../../config/config.js'
 import User from '../models/UserModel.js'
 import PurchasedBooks from '../models/PurchasedBooksModel.js'
+import LahzaService from '../services/LahzaService.js'
 
 // Create a new transaction
 export const createTransaction = async (req, res) => {
@@ -231,6 +232,70 @@ export const getAllTransactions = async (req, res) => {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       message: 'Error fetching transactions',
       error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+// Add this new method to handle payment callbacks
+export const handlePaymentCallback = async (req, res) => {
+  try {
+    const { reference } = req.query
+
+    if (!reference) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        message: 'No transaction reference provided',
+      })
+    }
+
+    // Verify transaction status with Lahza
+    const verificationData = await LahzaService.verifyTransaction(reference)
+    
+    // Find the transaction in our database
+    const transaction = await TransactionModel.findOne({
+      'paymentGateway.transactionId': reference,
+    })
+
+    if (!transaction) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        message: 'Transaction not found',
+      })
+    }
+
+    // Update transaction status based on Lahza verification
+    transaction.status = verificationData.status === 'success' ? 'COMPLETED' : 'FAILED'
+    transaction.paymentGateway.gatewayResponse = verificationData
+    await transaction.save()
+
+    // If payment was successful, process the purchase
+    if (verificationData.status === 'success') {
+      if (transaction.type === 'BOOK_PURCHASE') {
+        // Add book to user's purchased books
+        await PurchasedBooks.create({
+          user: transaction.user,
+          book: transaction.referenceId,
+          purchasePrice: transaction.amount,
+        })
+      }
+      // Just return a success message
+      return res.status(StatusCodes.OK).json({
+        success: true,
+        message: 'Payment completed successfully. You can close this window.',
+        reference
+      })
+    }
+
+    // Return failure message
+    return res.status(StatusCodes.OK).json({
+      success: false,
+      message: 'Payment was not successful. Please try again.',
+      reference
+    })
+  } catch (error) {
+    console.error('Payment callback error:', error)
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'An error occurred processing the payment.',
+      error: config.env === 'development' ? error.message : undefined
     })
   }
 } 
