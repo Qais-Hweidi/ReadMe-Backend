@@ -276,73 +276,29 @@ export const handlePaymentCallback = async (req, res) => {
           purchasePrice: transaction.amount,
         })
       } else if (transaction.type === 'SUBSCRIPTION') {
-        try {
-          const user = await User.findById(transaction.user)
-          let expiryDate = new Date(transaction.subscriptionPeriod.endDate)
-
-          // If user has active subscription of same plan, extend it
-          if (user.subscriptionStatus === 'active' && 
-              user.subscriptionPlanId?.toString() === transaction.referenceId.toString() &&
-              user.subscriptionExpiryDate > new Date()) {
-            // Create new date from existing expiry date
-            expiryDate = new Date(user.subscriptionExpiryDate)
-            // Get duration from transaction metadata
-            const durationInDays = transaction.paymentGateway.gatewayResponse?.metadata?.durationInDays || 
-                                  transaction.subscriptionPeriod?.durationInDays || 
-                                  30 // fallback duration
-            
-            // Add duration to expiry date
-            expiryDate.setDate(expiryDate.getDate() + durationInDays)
-          }
-
-          // Validate expiry date before updating
-          if (!(expiryDate instanceof Date) || isNaN(expiryDate)) {
-            throw new Error('Invalid expiry date calculated')
-          }
-
-          // Activate or extend subscription
-          await User.findByIdAndUpdate(transaction.user, {
-            subscriptionStatus: 'active',
-            subscriptionPlanId: transaction.referenceId,
-            subscriptionExpiryDate: expiryDate,
-          })
-        } catch (error) {
-          console.error('Subscription activation error:', error)
-          return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-            success: false,
-            message: 'Failed to activate subscription',
-            error: config.env === 'development' ? error.message : undefined
-          })
+        const user = await User.findById(transaction.user)
+        let expiryDate = new Date(transaction.subscriptionPeriod.endDate)
+        
+        // If user has active subscription of same plan, extend it
+        if (user.subscriptionStatus === 'active' && 
+            user.subscriptionPlanId?.toString() === transaction.referenceId.toString() &&
+            user.subscriptionExpiryDate > new Date()) {
+          expiryDate = new Date(user.subscriptionExpiryDate)
+          expiryDate.setDate(expiryDate.getDate() + transaction.subscriptionPeriod.durationInDays)
         }
+
+        // Activate or extend subscription
+        await User.findByIdAndUpdate(transaction.user, {
+          subscriptionStatus: 'active',
+          subscriptionPlanId: transaction.referenceId,
+          subscriptionExpiryDate: expiryDate,
+        })
       }
 
-      // Check if this is a redirect from payment page
-      const isRedirect = req.query.redirect === 'true'
-      
-      if (isRedirect) {
-        // Return HTML that auto-closes the window
-        return res.send(`
-          <html>
-            <body>
-              <script>
-                window.onload = function() {
-                  window.close();
-                  // Fallback if window.close() doesn't work
-                  setTimeout(function() {
-                    document.body.innerHTML = "Payment completed. You can close this window.";
-                  }, 1000);
-                }
-              </script>
-              <p>Payment completed successfully. This window will close automatically...</p>
-            </body>
-          </html>
-        `);
-      }
-
-      // API response for non-redirect calls
+      // Just return a success message
       return res.status(StatusCodes.OK).json({
         success: true,
-        message: 'Payment completed successfully.',
+        message: 'Payment completed successfully. You can close this window.',
         reference
       })
     }

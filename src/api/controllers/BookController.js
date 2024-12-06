@@ -184,7 +184,7 @@ export const purchaseBook = async (req, res) => {
       amount: book.price,
       email: req.user.email,
       reference: transaction.paymentGateway.transactionId,
-      callback_url: `${config.baseUrl}/api/v1/transactions/callback?redirect=true`,
+      callback_url: `${config.baseUrl}/api/v1/transactions/callback`,
       metadata: {
         transactionId: transaction._id.toString(),
         type: 'BOOK_PURCHASE',

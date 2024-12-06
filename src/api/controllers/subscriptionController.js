@@ -50,7 +50,7 @@ export const subscribeToPlan = async (req, res) => {
       amount: plan.price,
       email: req.user.email,
       reference: transaction.paymentGateway.transactionId,
-      callback_url: `${config.baseUrl}/api/v1/transactions/callback?redirect=true`,
+      callback_url: `${config.baseUrl}/api/v1/transactions/callback`,
       metadata: {
         transactionId: transaction._id.toString(),
         type: 'SUBSCRIPTION',
