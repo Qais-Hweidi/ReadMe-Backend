@@ -24,7 +24,13 @@ router.get('/:transactionId', protect, getTransactionById)
 router.post('/', protect, validate(createTransactionValidation), createTransaction)
 
 // Admin Routes
-router.get('/admin/all', protect, admin, validate(getTransactionsQueryValidation, 'query'), getAllTransactions)
+router.get(
+  '/admin/all',
+  protect,
+  admin,
+  validate(getTransactionsQueryValidation, 'query'),
+  getAllTransactions
+)
 router.patch(
   '/:transactionId/status',
   protect,
@@ -33,4 +39,4 @@ router.patch(
   updateTransactionStatus
 )
 
-export default router 
+export default router

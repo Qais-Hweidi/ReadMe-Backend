@@ -6,7 +6,7 @@ class LahzaService {
     this.client = axios.create({
       baseURL: lahzaConfig.apiUrl,
       headers: {
-        'Authorization': `Bearer ${lahzaConfig.secretKey}`,
+        Authorization: `Bearer ${lahzaConfig.secretKey}`,
         'Content-Type': 'application/json',
       },
     })
@@ -27,13 +27,11 @@ class LahzaService {
         currency,
         reference,
         callback_url,
-        metadata
+        metadata,
       })
 
-      console.log('Lahza Response:', response.data) // For debugging
       return response.data.data
     } catch (error) {
-      console.error('Lahza Error:', error.response?.data || error.message)
       throw new Error(`Failed to initialize transaction: ${error.message}`)
     }
   }
