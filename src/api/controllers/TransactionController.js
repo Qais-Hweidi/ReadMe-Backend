@@ -316,10 +316,33 @@ export const handlePaymentCallback = async (req, res) => {
         }
       }
 
-      // Just return a success message
+      // Check if this is a redirect from payment page
+      const isRedirect = req.query.redirect === 'true'
+      
+      if (isRedirect) {
+        // Return HTML that auto-closes the window
+        return res.send(`
+          <html>
+            <body>
+              <script>
+                window.onload = function() {
+                  window.close();
+                  // Fallback if window.close() doesn't work
+                  setTimeout(function() {
+                    document.body.innerHTML = "Payment completed. You can close this window.";
+                  }, 1000);
+                }
+              </script>
+              <p>Payment completed successfully. This window will close automatically...</p>
+            </body>
+          </html>
+        `);
+      }
+
+      // API response for non-redirect calls
       return res.status(StatusCodes.OK).json({
         success: true,
-        message: 'Payment completed successfully. You can close this window.',
+        message: 'Payment completed successfully.',
         reference
       })
     }
