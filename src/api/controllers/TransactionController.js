@@ -32,14 +32,7 @@ export const createTransaction = async (req, res) => {
 // Get user's transactions with filtering and pagination
 export const getUserTransactions = async (req, res) => {
   try {
-    const {
-      type,
-      status,
-      startDate,
-      endDate,
-      limit = 10,
-      page = 1,
-    } = req.query
+    const { type, status, startDate, endDate, limit = 10, page = 1 } = req.query
 
     const query = { user: req.user._id }
 
@@ -142,9 +135,11 @@ export const updateTransactionStatus = async (req, res) => {
         let expiryDate = transaction.subscriptionPeriod.endDate
 
         // If user has active subscription of same plan, extend it
-        if (user.subscriptionStatus === 'active' && 
-            user.subscriptionPlanId?.toString() === transaction.referenceId.toString() &&
-            user.subscriptionExpiryDate > now) {
+        if (
+          user.subscriptionStatus === 'active' &&
+          user.subscriptionPlanId?.toString() === transaction.referenceId.toString() &&
+          user.subscriptionExpiryDate > now
+        ) {
           expiryDate = new Date(user.subscriptionExpiryDate)
           expiryDate.setDate(expiryDate.getDate() + transaction.subscriptionPeriod.durationInDays)
         }
@@ -187,14 +182,7 @@ export const updateTransactionStatus = async (req, res) => {
 // Get all transactions (Admin only)
 export const getAllTransactions = async (req, res) => {
   try {
-    const {
-      type,
-      status,
-      startDate,
-      endDate,
-      limit = 10,
-      page = 1,
-    } = req.query
+    const { type, status, startDate, endDate, limit = 10, page = 1 } = req.query
 
     const query = {}
 
@@ -249,7 +237,7 @@ export const handlePaymentCallback = async (req, res) => {
 
     // Verify transaction status with Lahza
     const verificationData = await LahzaService.verifyTransaction(reference)
-    
+
     // Find the transaction in our database
     const transaction = await TransactionModel.findOne({
       'paymentGateway.transactionId': reference,
@@ -277,29 +265,69 @@ export const handlePaymentCallback = async (req, res) => {
         })
       } else if (transaction.type === 'SUBSCRIPTION') {
         const user = await User.findById(transaction.user)
-        let expiryDate = new Date(transaction.subscriptionPeriod.endDate)
-        
-        // If user has active subscription of same plan, extend it
-        if (user.subscriptionStatus === 'active' && 
-            user.subscriptionPlanId?.toString() === transaction.referenceId.toString() &&
-            user.subscriptionExpiryDate > new Date()) {
-          expiryDate = new Date(user.subscriptionExpiryDate)
+
+        // Calculate expiry date
+        let expiryDate = new Date() // Start with current date as base
+
+        // Add the duration in days
+        if (transaction.subscriptionPeriod && transaction.subscriptionPeriod.durationInDays) {
           expiryDate.setDate(expiryDate.getDate() + transaction.subscriptionPeriod.durationInDays)
         }
 
+        // If user has active subscription of same plan, extend from current expiry
+        if (
+          user.subscriptionStatus === 'active' &&
+          user.subscriptionPlanId?.toString() === transaction.referenceId.toString() &&
+          user.subscriptionExpiryDate
+        ) {
+          try {
+            const currentExpiryDate = new Date(user.subscriptionExpiryDate)
+            if (!isNaN(currentExpiryDate.getTime()) && currentExpiryDate > new Date()) {
+              // Only extend if current expiry is valid and in the future
+              expiryDate = new Date(currentExpiryDate)
+              expiryDate.setDate(
+                expiryDate.getDate() + transaction.subscriptionPeriod.durationInDays
+              )
+            }
+          } catch (err) {
+            console.error('Error parsing current expiry date:', err)
+            // Keep the previously calculated expiryDate if there's an error
+          }
+        }
+
+        // Ensure we have a valid date before updating
+        if (isNaN(expiryDate.getTime())) {
+          // If somehow we still have an invalid date, use current date + duration
+          expiryDate = new Date()
+          expiryDate.setDate(
+            expiryDate.getDate() + (transaction.subscriptionPeriod?.durationInDays || 30)
+          )
+        }
+
+        // Format the date to ISO string to ensure proper date format
+        const formattedExpiryDate = expiryDate.toISOString()
+
         // Activate or extend subscription
-        await User.findByIdAndUpdate(transaction.user, {
-          subscriptionStatus: 'active',
-          subscriptionPlanId: transaction.referenceId,
-          subscriptionExpiryDate: expiryDate,
-        })
+        const updatedUser = await User.findByIdAndUpdate(
+          transaction.user,
+          {
+            subscriptionStatus: 'active',
+            subscriptionPlanId: transaction.referenceId,
+            subscriptionExpiryDate: formattedExpiryDate,
+          },
+          { new: true, runValidators: true }
+        )
+
+        if (!updatedUser) {
+          throw new Error('Failed to update user subscription')
+        }
       }
 
       // Just return a success message
       return res.status(StatusCodes.OK).json({
         success: true,
         message: 'Payment completed successfully. You can close this window.',
-        reference
+        reference,
       })
     }
 
@@ -307,14 +335,14 @@ export const handlePaymentCallback = async (req, res) => {
     return res.status(StatusCodes.OK).json({
       success: false,
       message: 'Payment was not successful. Please try again.',
-      reference
+      reference,
     })
   } catch (error) {
     console.error('Payment callback error:', error)
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: 'An error occurred processing the payment.',
-      error: config.env === 'development' ? error.message : undefined
+      error: config.env === 'development' ? error.message : undefined,
     })
   }
-} 
+}
