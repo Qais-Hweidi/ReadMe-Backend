@@ -15,6 +15,7 @@ import favoriteRoutes from './api/routes/FavoriteRoutes.js'
 import subscriptionPlanRoutes from './api/routes/SubscriptionPlanRoutes.js'
 import subscriptionRoutes from './api/routes/subscriptionRoutes.js'
 import transactionRoutes from './api/routes/TransactionRoutes.js'
+import notificationRoutes from './api/routes/notificationRoutes.js'
 
 const app = express()
 
@@ -43,6 +44,7 @@ app.use('/api/v1/favorites', favoriteRoutes)
 app.use('/api/v1/subscription-plans', subscriptionPlanRoutes)
 app.use('/api/v1/subscriptions', subscriptionRoutes)
 app.use('/api/v1/transactions', transactionRoutes)
+app.use('/api/v1/notifications', notificationRoutes)
 
 app.get('/health', (req, res) => {
   res.status(StatusCodes.OK).json({ status: 'ok', service: 'readme-api' })

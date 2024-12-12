@@ -51,6 +51,20 @@ const userSchema = new mongoose.Schema(
     subscriptionExpiryDate: {
       type: Date,
     },
+    fcmTokens: [{
+      token: {
+        type: String,
+        required: true,
+      },
+      device: {
+        type: String,
+        required: true,
+      },
+      lastUsed: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
   },
   {
     timestamps: true,
@@ -71,6 +85,21 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 
 userSchema.methods.hasActiveSubscription = function () {
   return this.subscriptionStatus === 'active' && this.subscriptionExpiryDate > new Date()
+}
+
+userSchema.methods.addFcmToken = async function (token, device) {
+  const tokenExists = this.fcmTokens.find(t => t.token === token)
+  if (tokenExists) {
+    tokenExists.lastUsed = new Date()
+  } else {
+    this.fcmTokens.push({ token, device })
+  }
+  await this.save()
+}
+
+userSchema.methods.removeFcmToken = async function (token) {
+  this.fcmTokens = this.fcmTokens.filter(t => t.token !== token)
+  await this.save()
 }
 
 export default mongoose.model('User', userSchema)

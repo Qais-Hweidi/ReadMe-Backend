@@ -2,8 +2,8 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 export const config = {
-  port: process.env.PORT || 3000,
   env: process.env.NODE_ENV,
+  port: process.env.PORT || 3000,
   baseUrl:
     process.env.NODE_ENV === 'production'
       ? 'https://readme-backend-zdiq.onrender.com'
@@ -26,5 +26,10 @@ export const config = {
     cloudName: 'dblnmsmks',
     apiKey: '961427695445425',
     apiSecret: process.env.CLOUDINARY_API_SECRET,
+  },
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY,
   },
 }
