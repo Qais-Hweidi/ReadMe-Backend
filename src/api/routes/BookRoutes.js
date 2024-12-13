@@ -30,6 +30,7 @@ router.get('/', getBooks)
 
 // User Routes (Protected) - Fixed order
 router.get('/purchased', protect, getPurchasedBooks)
+router.get('/:bookId/protected', protect, validate(bookIdParamValidation, 'params'), getBookById)
 
 // Routes with :bookId parameter
 router.get('/:bookId', validate(bookIdParamValidation, 'params'), getBookById)
