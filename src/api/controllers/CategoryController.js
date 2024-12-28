@@ -6,10 +6,7 @@ import { cloudinary } from '../../config/cloudinaryConfig.js'
 export const getCategories = async (req, res) => {
   try {
     const categories = await CategoryModel.find({
-      $or: [
-        { isVisible: true },
-        { isVisible: { $exists: false } }
-      ]
+      $or: [{ isVisible: true }, { isVisible: { $exists: false } }],
     }).sort({ createdAt: -1 })
     res.status(StatusCodes.OK).json({
       categories,
@@ -174,6 +171,20 @@ export const toggleCategoryVisibility = async (req, res) => {
     res.status(StatusCodes.OK).json({
       message: `Category is now ${category.isVisible ? 'visible' : 'hidden'}`,
       isVisible: category.isVisible,
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const getAllCategories = async (req, res) => {
+  try {
+    const categories = await CategoryModel.find().sort({ createdAt: -1 })
+    res.status(StatusCodes.OK).json({
+      categories,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({

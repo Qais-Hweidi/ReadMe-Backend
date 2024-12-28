@@ -188,8 +188,8 @@ export const purchaseBook = async (req, res) => {
       metadata: {
         transactionId: transaction._id.toString(),
         type: 'BOOK_PURCHASE',
-        bookId: bookId
-      }
+        bookId: bookId,
+      },
     })
 
     res.status(StatusCodes.OK).json({
@@ -200,8 +200,8 @@ export const purchaseBook = async (req, res) => {
         status: transaction.status,
       },
       payment: {
-        authorization_url: paymentInit.authorization_url
-      }
+        authorization_url: paymentInit.authorization_url,
+      },
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -634,6 +634,24 @@ export const toggleBookVisibility = async (req, res) => {
     res.status(StatusCodes.OK).json({
       message: `Book is now ${book.isVisible ? 'visible' : 'hidden'}`,
       isVisible: book.isVisible,
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const getAllBooks = async (req, res) => {
+  try {
+    const books = await BookModel.find()
+      .populate('category', 'title')
+      .populate('authors', 'fullName profilePicture')
+      .sort({ createdAt: -1 })
+
+    res.status(StatusCodes.OK).json({
+      books,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({

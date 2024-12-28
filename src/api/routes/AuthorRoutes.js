@@ -7,6 +7,7 @@ import {
   deleteAuthor,
   toggleAuthorVisibility,
   getAuthorsWithBookCount,
+  getAllAuthors,
 } from '../controllers/AuthorController.js'
 import { protect, admin } from '../middlewares/AuthMiddleware.js'
 import { upload } from '../middlewares/uploadMiddleware.js'
@@ -18,9 +19,9 @@ const router = express.Router()
 // Public Routes
 router.get('/', getAuthors)
 router.get('/with-book-count', getAuthorsWithBookCount)
-router.get('/:id', getAuthorById)
 
 // Admin Routes
+router.get('/all', protect, admin, getAllAuthors)
 router.post(
   '/',
   protect,
@@ -29,6 +30,9 @@ router.post(
   validate(createAuthorValidation),
   createAuthor
 )
+
+// Routes with :id parameter
+router.get('/:id', getAuthorById)
 router.put(
   '/:id',
   protect,

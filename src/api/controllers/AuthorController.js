@@ -7,10 +7,7 @@ import { cloudinary } from '../../config/cloudinaryConfig.js'
 export const getAuthors = async (req, res) => {
   try {
     const authors = await AuthorModel.find({
-      $or: [
-        { isVisible: true },
-        { isVisible: { $exists: false } }
-      ]
+      $or: [{ isVisible: true }, { isVisible: { $exists: false } }],
     }).sort({ createdAt: -1 })
     res.status(StatusCodes.OK).json({
       authors,
@@ -27,10 +24,7 @@ export const getAuthorById = async (req, res) => {
   try {
     const author = await AuthorModel.findOne({
       _id: req.params.id,
-      $or: [
-        { isVisible: true },
-        { isVisible: { $exists: false } }
-      ]
+      $or: [{ isVisible: true }, { isVisible: { $exists: false } }],
     })
     if (!author) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -203,11 +197,8 @@ export const getAuthorsWithBookCount = async (req, res) => {
     const authors = await AuthorModel.aggregate([
       {
         $match: {
-          $or: [
-            { isVisible: true },
-            { isVisible: { $exists: false } }
-          ]
-        }
+          $or: [{ isVisible: true }, { isVisible: { $exists: false } }],
+        },
       },
       {
         $lookup: {
@@ -217,15 +208,12 @@ export const getAuthorsWithBookCount = async (req, res) => {
           pipeline: [
             {
               $match: {
-                $or: [
-                  { isVisible: true },
-                  { isVisible: { $exists: false } }
-                ]
-              }
-            }
+                $or: [{ isVisible: true }, { isVisible: { $exists: false } }],
+              },
+            },
           ],
-          as: 'books'
-        }
+          as: 'books',
+        },
       },
       {
         $project: {
@@ -233,10 +221,24 @@ export const getAuthorsWithBookCount = async (req, res) => {
           fullName: 1,
           profilePicture: 1,
           bookCount: { $size: '$books' },
-        }
+        },
       },
     ])
 
+    res.status(StatusCodes.OK).json({
+      authors,
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const getAllAuthors = async (req, res) => {
+  try {
+    const authors = await AuthorModel.find().sort({ createdAt: -1 })
     res.status(StatusCodes.OK).json({
       authors,
     })

@@ -13,6 +13,7 @@ import {
   checkPurchaseStatus,
   purchaseBook,
   getPurchasedBooks,
+  getAllBooks,
 } from '../controllers/BookController.js'
 import { protect, admin } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
@@ -27,6 +28,17 @@ const router = express.Router()
 
 // Public Routes
 router.get('/', getBooks)
+
+// Admin Routes
+router.get('/all', protect, admin, getAllBooks)
+router.post(
+  '/',
+  protect,
+  admin,
+  upload.single('image'),
+  validate(createBookValidation, 'body'),
+  createBook
+)
 
 // User Routes (Protected) - Fixed order
 router.get('/purchased', protect, getPurchasedBooks)
@@ -60,16 +72,6 @@ router.post(
   protect,
   validate(bookIdParamValidation, 'params'),
   incrementBookReadings
-)
-
-// Admin Routes
-router.post(
-  '/',
-  protect,
-  admin,
-  upload.single('image'),
-  validate(createBookValidation, 'body'),
-  createBook
 )
 router.put(
   '/:bookId',
