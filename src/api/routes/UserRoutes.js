@@ -8,8 +8,9 @@ import {
   deleteProfilePicture,
   logout,
   deleteAccount,
+  getUserCount,
 } from '../controllers/UserController.js'
-import { protect } from '../middlewares/AuthMiddleware.js'
+import { protect, admin } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
 import { upload } from '../middlewares/uploadMiddleware.js'
 import {
@@ -25,6 +26,9 @@ const router = express.Router()
 router.post('/auth/register', validate(registerValidation), register)
 router.post('/auth/login', validate(loginValidation), login)
 router.post('/auth/verify-email', validate(verifyEmailValidation), verifyEmail)
+
+// Admin Routes
+router.get('/count', protect, admin, getUserCount)
 
 // User Routes (Protected)
 // Profile Management

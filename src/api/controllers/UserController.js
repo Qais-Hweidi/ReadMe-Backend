@@ -299,7 +299,7 @@ export const logout = async (req, res) => {
 export const deleteAccount = async (req, res) => {
   try {
     const user = await UserModel.findById(req.user._id)
-    
+
     if (!user) {
       return res.status(StatusCodes.NOT_FOUND).json({
         message: 'User not found',
@@ -327,6 +327,20 @@ export const deleteAccount = async (req, res) => {
 
     res.status(StatusCodes.OK).json({
       message: 'Account deleted successfully',
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const getUserCount = async (req, res) => {
+  try {
+    const count = await UserModel.countDocuments()
+    res.status(StatusCodes.OK).json({
+      count,
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
