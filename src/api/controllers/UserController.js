@@ -349,3 +349,126 @@ export const getUserCount = async (req, res) => {
     })
   }
 }
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await UserModel.find({})
+      .select('_id email fullName phoneNumber gender profilePicture isVerified createdAt')
+      .sort({ createdAt: -1 })
+
+    res.status(StatusCodes.OK).json({
+      users,
+      count: users.length,
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const updateUserByAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params
+    const updateData = { ...req.body }
+
+    const user = await UserModel.findById(userId)
+    if (!user) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        message: 'User not found',
+      })
+    }
+
+    if (req.file) {
+      const b64 = Buffer.from(req.file.buffer).toString('base64')
+      const dataURI = `data:${req.file.mimetype};base64,${b64}`
+
+      if (user.profilePicture) {
+        const urlParts = user.profilePicture.split('/')
+        const filename = urlParts[urlParts.length - 1]
+        const oldPublicId = `profiles/${filename.split('.')[0]}`
+
+        try {
+          await cloudinary.uploader.destroy(oldPublicId)
+        } catch (error) {
+          console.error('Error deleting old profile picture:', error)
+        }
+      }
+
+      const uploadResult = await cloudinary.uploader.upload(dataURI, {
+        folder: 'profiles',
+        resource_type: 'auto',
+      })
+
+      updateData.profilePicture = uploadResult.secure_url
+    }
+
+    const updatedUser = await UserModel.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    }).select('_id email fullName phoneNumber gender profilePicture isVerified isAdmin')
+
+    res.status(StatusCodes.OK).json({
+      message: 'User updated successfully',
+      user: updatedUser,
+    })
+  } catch (error) {
+    if (req.file && updateData?.profilePicture) {
+      const urlParts = updateData.profilePicture.split('/')
+      const filename = urlParts[urlParts.length - 1]
+      const publicId = `profiles/${filename.split('.')[0]}`
+
+      try {
+        await cloudinary.uploader.destroy(publicId)
+      } catch (err) {
+        console.error('Error cleaning up uploaded file:', err)
+      }
+    }
+
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}
+
+export const deleteUserByAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params
+
+    const user = await UserModel.findById(userId)
+    if (!user) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        message: 'User not found',
+      })
+    }
+
+    // Delete profile picture from Cloudinary if exists
+    if (user.profilePicture) {
+      const urlParts = user.profilePicture.split('/')
+      const filename = urlParts[urlParts.length - 1]
+      const publicId = `profiles/${filename.split('.')[0]}`
+
+      try {
+        await cloudinary.uploader.destroy(publicId)
+      } catch (error) {
+        console.error('Error deleting profile picture:', error)
+      }
+    }
+
+    // Delete associated data
+    await ReviewModel.deleteMany({ user: userId })
+    await ReportModel.deleteMany({ user: userId })
+    await user.deleteOne()
+
+    res.status(StatusCodes.OK).json({
+      message: 'User deleted successfully',
+    })
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: 'Server error',
+      error: config.env === 'development' ? error.message : undefined,
+    })
+  }
+}

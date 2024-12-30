@@ -9,6 +9,9 @@ import {
   logout,
   deleteAccount,
   getUserCount,
+  getAllUsers,
+  updateUserByAdmin,
+  deleteUserByAdmin,
 } from '../controllers/UserController.js'
 import { protect, admin } from '../middlewares/AuthMiddleware.js'
 import { validate } from '../middlewares/ValidateMiddleware.js'
@@ -29,6 +32,9 @@ router.post('/auth/verify-email', validate(verifyEmailValidation), verifyEmail)
 
 // Admin Routes
 router.get('/count', protect, admin, getUserCount)
+router.get('/all', protect, admin, getAllUsers)
+router.put('/:userId', protect, admin, upload.single('profilePicture'), updateUserByAdmin)
+router.delete('/:userId', protect, admin, deleteUserByAdmin)
 
 // User Routes (Protected)
 // Profile Management
