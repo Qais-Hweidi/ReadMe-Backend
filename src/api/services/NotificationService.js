@@ -18,6 +18,12 @@ try {
 class NotificationService {
   static async sendToTopic(topic, { title, body, imageUrl = null, data = {} }) {
     try {
+      // Convert all data values to strings
+      const stringifiedData = {}
+      Object.keys(data).forEach(key => {
+        stringifiedData[key] = String(data[key])
+      })
+
       const message = {
         topic,
         notification: {
@@ -41,7 +47,7 @@ class NotificationService {
             },
           },
         },
-        data: typeof data === 'object' ? JSON.stringify(data) : data,
+        data: stringifiedData, // Use the stringified data object
       }
 
       const response = await admin.messaging().send(message)
