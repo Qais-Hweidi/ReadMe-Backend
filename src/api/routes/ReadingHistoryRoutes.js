@@ -12,7 +12,17 @@ const router = express.Router()
 
 // User Routes (Protected)
 router.get('/', protect, getContinueReading)
-router.post('/books/:bookId', protect, validate(readingHistoryValidation), addToReadingHistory)
-router.delete('/books/:bookId', protect, validate(readingHistoryValidation), removeFromReadingHistory)
+router.post(
+  '/books/:bookId',
+  protect,
+  validate(readingHistoryValidation, 'params'),
+  addToReadingHistory
+)
+router.delete(
+  '/books/:bookId',
+  protect,
+  validate(readingHistoryValidation, 'params'),
+  removeFromReadingHistory
+)
 
-export default router 
+export default router
