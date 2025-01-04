@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import ReviewModel from '../models/ReviewModel.js'
 import { config } from '../../config/config.js'
+import { moderateContent } from '../services/ContentModerationService.js'
 
 export const getBookReviews = async (req, res) => {
   try {
@@ -21,6 +22,18 @@ export const getBookReviews = async (req, res) => {
 
 export const createReview = async (req, res) => {
   try {
+    // If review content is provided, moderate it
+    if (req.body.review) {
+      const moderationResult = await moderateContent(req.body.review)
+      if (!moderationResult.isAppropriate) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Your review contains inappropriate content',
+          reason: moderationResult.reason,
+          suggestion: moderationResult.suggestedEdit,
+        })
+      }
+    }
+
     const review = await ReviewModel.create({
       user: req.user._id,
       book: req.params.bookId,
@@ -61,6 +74,18 @@ export const updateReview = async (req, res) => {
       return res.status(StatusCodes.NOT_FOUND).json({
         message: 'Review not found or not authorized',
       })
+    }
+
+    // If review content is being updated, moderate it
+    if (req.body.review) {
+      const moderationResult = await moderateContent(req.body.review)
+      if (!moderationResult.isAppropriate) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Your review contains inappropriate content',
+          reason: moderationResult.reason,
+          suggestion: moderationResult.suggestedEdit,
+        })
+      }
     }
 
     const updatedReview = await ReviewModel.findByIdAndUpdate(req.params.reviewId, req.body, {
