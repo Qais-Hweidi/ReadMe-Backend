@@ -36,7 +36,7 @@ export const subscribeToPlan = async (req, res) => {
       subscriptionPeriod: {
         startDate: now,
         endDate: expiryDate,
-        durationInDays: plan.durationInDays
+        durationInDays: parseInt(plan.durationInDays),
       },
       paymentGateway: {
         transactionId: `sub_${Date.now()}`, // Will be used as Lahza reference
@@ -55,8 +55,8 @@ export const subscribeToPlan = async (req, res) => {
         transactionId: transaction._id.toString(),
         type: 'SUBSCRIPTION',
         planId: planId,
-        durationInDays: plan.durationInDays
-      }
+        durationInDays: plan.durationInDays,
+      },
     })
 
     res.status(StatusCodes.OK).json({
@@ -67,8 +67,8 @@ export const subscribeToPlan = async (req, res) => {
         status: transaction.status,
       },
       payment: {
-        authorization_url: paymentInit.authorization_url
-      }
+        authorization_url: paymentInit.authorization_url,
+      },
     })
   } catch (error) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -105,9 +105,10 @@ export const getSubscriptionDetails = async (req, res) => {
         plan: user.subscriptionPlanId,
         expiryDate: user.subscriptionExpiryDate,
         isExpired: user.subscriptionExpiryDate < new Date(),
-        daysLeft: user.subscriptionExpiryDate > new Date() 
-          ? Math.ceil((user.subscriptionExpiryDate - new Date()) / (1000 * 60 * 60 * 24))
-          : 0
+        daysLeft:
+          user.subscriptionExpiryDate > new Date()
+            ? Math.ceil((user.subscriptionExpiryDate - new Date()) / (1000 * 60 * 60 * 24))
+            : 0,
       },
     })
   } catch (error) {

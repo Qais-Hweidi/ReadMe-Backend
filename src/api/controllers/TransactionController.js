@@ -266,45 +266,36 @@ export const handlePaymentCallback = async (req, res) => {
       } else if (transaction.type === 'SUBSCRIPTION') {
         const user = await User.findById(transaction.user)
 
-        // Calculate expiry date
-        let expiryDate = new Date() // Start with current date as base
-
-        // Add the duration in days
-        if (transaction.subscriptionPeriod && transaction.subscriptionPeriod.durationInDays) {
-          expiryDate.setDate(expiryDate.getDate() + transaction.subscriptionPeriod.durationInDays)
-        }
+        // Use the pre-calculated expiry date from the transaction
+        let expiryDate = new Date(transaction.subscriptionPeriod.endDate)
 
         // If user has active subscription of same plan, extend from current expiry
         if (
           user.subscriptionStatus === 'active' &&
           user.subscriptionPlanId?.toString() === transaction.referenceId.toString() &&
-          user.subscriptionExpiryDate
+          user.subscriptionExpiryDate &&
+          new Date(user.subscriptionExpiryDate) > new Date()
         ) {
           try {
             const currentExpiryDate = new Date(user.subscriptionExpiryDate)
-            if (!isNaN(currentExpiryDate.getTime()) && currentExpiryDate > new Date()) {
-              // Only extend if current expiry is valid and in the future
-              expiryDate = new Date(currentExpiryDate)
-              expiryDate.setDate(
-                expiryDate.getDate() + transaction.subscriptionPeriod.durationInDays
-              )
+
+            // Get duration from transaction's subscription period
+            const durationInDays = parseInt(transaction.subscriptionPeriod?.durationInDays)
+            if (isNaN(durationInDays)) {
+              throw new Error('Invalid duration')
             }
+
+            // Create new date for extension
+            expiryDate = new Date(currentExpiryDate)
+            // Add days using UTC to avoid timezone issues
+            expiryDate.setUTCDate(expiryDate.getUTCDate() + durationInDays)
           } catch (err) {
-            console.error('Error parsing current expiry date:', err)
-            // Keep the previously calculated expiryDate if there's an error
+            // Fallback to the original transaction end date
+            expiryDate = new Date(transaction.subscriptionPeriod.endDate)
           }
         }
 
-        // Ensure we have a valid date before updating
-        if (isNaN(expiryDate.getTime())) {
-          // If somehow we still have an invalid date, use current date + duration
-          expiryDate = new Date()
-          expiryDate.setDate(
-            expiryDate.getDate() + (transaction.subscriptionPeriod?.durationInDays || 30)
-          )
-        }
-
-        // Format the date to ISO string to ensure proper date format
+        // Format the date to ISO string
         const formattedExpiryDate = expiryDate.toISOString()
 
         // Activate or extend subscription

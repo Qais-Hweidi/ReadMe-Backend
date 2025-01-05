@@ -53,6 +53,7 @@ const transactionSchema = new mongoose.Schema(
     subscriptionPeriod: {
       startDate: Date,
       endDate: Date,
+      durationInDays: Number,
     },
     // Payment gateway specific fields
     paymentGateway: {
@@ -76,4 +77,4 @@ transactionSchema.index({ user: 1, createdAt: -1 })
 transactionSchema.index({ type: 1, status: 1 })
 transactionSchema.index({ 'paymentGateway.transactionId': 1 }, { sparse: true })
 
-export default mongoose.model('Transaction', transactionSchema) 
+export default mongoose.model('Transaction', transactionSchema)
