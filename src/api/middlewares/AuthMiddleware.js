@@ -19,10 +19,9 @@ export const protect = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, config.jwt.secret)
-      
-      const user = await UserModel.findById(decoded.id)
-        .select('_id email fullName')
-      
+
+      const user = await UserModel.findById(decoded.id).select('_id email fullName')
+
       if (!user) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
           message: 'User not found',
@@ -30,7 +29,7 @@ export const protect = async (req, res, next) => {
       }
 
       user.isAdmin = !!decoded.isAdmin
-      
+
       req.user = user
       next()
     } catch (error) {

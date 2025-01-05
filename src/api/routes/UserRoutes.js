@@ -30,12 +30,6 @@ router.post('/auth/register', validate(registerValidation), register)
 router.post('/auth/login', validate(loginValidation), login)
 router.post('/auth/verify-email', validate(verifyEmailValidation), verifyEmail)
 
-// Admin Routes
-router.get('/count', protect, admin, getUserCount)
-router.get('/all', protect, admin, getAllUsers)
-router.put('/:userId', protect, admin, upload.single('profilePicture'), updateUserByAdmin)
-router.delete('/:userId', protect, admin, deleteUserByAdmin)
-
 // User Routes (Protected)
 // Profile Management
 router.get('/me', protect, getMe)
@@ -49,5 +43,13 @@ router.put(
 router.delete('/profile/picture', protect, deleteProfilePicture)
 router.delete('/account', protect, deleteAccount)
 router.post('/auth/logout', protect, logout)
+
+// Admin Routes
+router.get('/count', protect, admin, getUserCount)
+router.get('/all', protect, admin, getAllUsers)
+router.put('/:userId', protect, admin, upload.single('profilePicture'), updateUserByAdmin)
+router.delete('/:userId', protect, admin, deleteUserByAdmin)
+
+
 
 export default router
