@@ -5,6 +5,7 @@ import Transaction from '../models/TransactionModel.js'
 import LahzaService from '../services/LahzaService.js'
 import { config } from '../../config/config.js'
 import { cloudinary } from '../../config/cloudinaryConfig.js'
+import User from '../models/UserModel.js'
 
 // Helper function to check if user can access premium book
 const canAccessPremiumBook = async (user, book) => {
@@ -15,8 +16,8 @@ const canAccessPremiumBook = async (user, book) => {
   const hasPurchased = await PurchasedBooks.findOne({ user: user._id, book: book._id })
   if (hasPurchased) return true
 
-  // If not purchased, check subscription
-  return user.subscriptionStatus === 'active' && user.subscriptionExpiryDate > new Date()
+  // If not purchased, check subscription - just check if status is active
+  return user.subscriptionStatus === 'active'
 }
 
 // Helper function to validate book purchase eligibility
@@ -244,6 +245,11 @@ export const getPurchasedBooks = async (req, res) => {
 // Check if user can access a specific book
 export const checkBookAccess = async (req, res) => {
   try {
+    // First get the full user data including subscription details
+    const user = await User.findById(req.user._id).select(
+      'subscriptionStatus subscriptionExpiryDate'
+    )
+
     const book = await BookModel.findById(req.params.bookId)
     if (!book) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -251,10 +257,12 @@ export const checkBookAccess = async (req, res) => {
       })
     }
 
-    const hasAccess = await canAccessPremiumBook(req.user, book)
+    const hasAccess = await canAccessPremiumBook(user, book)
+
     res.status(StatusCodes.OK).json({
       hasAccess,
       requiresSubscription: !book.free,
+      bookLink: hasAccess ? book.bookLink : null,
       message: hasAccess
         ? 'You can access this book'
         : book.free
@@ -278,14 +286,22 @@ export const getBooks = async (req, res) => {
       .populate('authors', 'fullName profilePicture')
       .sort({ createdAt: -1 })
 
+    // Get full user data if user is logged in
+    const user = req.user
+      ? await User.findById(req.user._id).select('subscriptionStatus subscriptionExpiryDate')
+      : null
+
     // Modify book data based on user's subscription status
-    const modifiedBooks = books.map(book => {
-      const bookObj = book.toObject()
-      if (!book.free && (!req.user || req.user.subscriptionStatus !== 'active')) {
-        delete bookObj.bookLink // Remove download link for premium books
-      }
-      return bookObj
-    })
+    const modifiedBooks = await Promise.all(
+      books.map(async book => {
+        const bookObj = book.toObject()
+        const hasAccess = await canAccessPremiumBook(user, book)
+        if (!hasAccess) {
+          delete bookObj.bookLink // Remove download link for premium books
+        }
+        return bookObj
+      })
+    )
 
     res.status(StatusCodes.OK).json({
       books: modifiedBooks,
@@ -313,11 +329,16 @@ export const getBookById = async (req, res) => {
       })
     }
 
+    // Get full user data if user is logged in
+    const user = req.user
+      ? await User.findById(req.user._id).select('subscriptionStatus subscriptionExpiryDate')
+      : null
+
     // Convert to plain object to modify
     const bookObj = book.toObject()
 
     // Check if user can access premium content
-    const hasAccess = await canAccessPremiumBook(req.user, book)
+    const hasAccess = await canAccessPremiumBook(user, book)
     if (!hasAccess) {
       delete bookObj.bookLink // Remove download link for premium books
     }
