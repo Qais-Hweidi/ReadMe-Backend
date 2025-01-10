@@ -66,6 +66,21 @@ const bookSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    summary: {
+      text: {
+        type: String,
+        default: null
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'processing', 'completed', 'failed'],
+        default: null
+      },
+      lastUpdated: {
+        type: Date,
+        default: null
+      }
+    }
   },
   {
     timestamps: true,
