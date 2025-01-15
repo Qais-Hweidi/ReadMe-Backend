@@ -18,6 +18,7 @@ import transactionRoutes from './api/routes/TransactionRoutes.js'
 import notificationRoutes from './api/routes/notificationRoutes.js'
 import chatRoutes from './api/routes/ChatRoutes.js'
 import webhookRoutes from './api/routes/webhookRoutes.js'
+import bookSummaryRoutes from './api/routes/BookSummaryRoutes.js'
 
 const app = express()
 
@@ -49,6 +50,7 @@ app.use('/api/v1/transactions', transactionRoutes)
 app.use('/api/v1/notifications', notificationRoutes)
 app.use('/api/v1/chat', chatRoutes)
 app.use('/api/v1/webhooks', webhookRoutes)
+app.use('/api/v1/summary', bookSummaryRoutes)
 
 app.get('/health', (req, res) => {
   res.status(StatusCodes.OK).json({ status: 'ok', service: 'readme-api' })

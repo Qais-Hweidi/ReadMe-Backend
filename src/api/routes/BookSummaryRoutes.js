@@ -1,13 +1,10 @@
 import express from 'express';
+import { protect } from '../middlewares/AuthMiddleware.js';
 import { BookSummaryController } from '../controllers/BookSummaryController.js';
-import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Request a summary for a book
-router.post('/books/:bookId/summary', authenticateToken, BookSummaryController.requestSummary);
-
-// Get the status of a summary request
-router.get('/books/:bookId/summary', authenticateToken, BookSummaryController.getSummaryStatus);
+router.post('/books/:bookId/summary', protect, BookSummaryController.requestSummary);
+router.get('/books/:bookId/summary', protect, BookSummaryController.getSummaryStatus);
 
 export default router;
