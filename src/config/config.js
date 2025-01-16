@@ -35,4 +35,7 @@ export const config = {
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY,
   },
+  elevenlabs: {
+    apiKey: process.env.ELEVENLABS_API_KEY,
+  },
 }

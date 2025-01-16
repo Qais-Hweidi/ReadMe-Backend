@@ -23,6 +23,7 @@
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
+    "elevenlabs": "^1.50.2",
     "express": "^4.21.1",
     "firebase-admin": "^13.0.1",
     "helmet": "^8.0.0",

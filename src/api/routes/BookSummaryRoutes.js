@@ -6,5 +6,6 @@ const router = express.Router();
 
 router.post('/books/:bookId/summary', protect, BookSummaryController.requestSummary);
 router.get('/books/:bookId/summary', protect, BookSummaryController.getSummaryStatus);
+router.get('/books/:bookId/summary/audio', protect, BookSummaryController.getSummaryAudio);
 
 export default router;
