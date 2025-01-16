@@ -195,40 +195,143 @@ export class BookSummaryService {
       throw error
     }
   }
-  static async getSummaryAudio(bookId) {
+
+  static async downloadFromGoogleDrive(driveUrl) {
+    try {
+      const fileId = driveUrl.match(/id=([^&]+)/)?.[1]
+      if (!fileId) {
+        throw new Error('Invalid Google Drive URL format')
+      }
+
+      const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`
+      const response = await axios({
+        method: 'get',
+        url: directUrl,
+        responseType: 'arraybuffer',
+        headers: {
+          Accept: 'application/pdf',
+        },
+        maxContentLength: 50 * 1024 * 1024,
+      })
+
+      return Buffer.from(response.data)
+    } catch (error) {
+      throw new Error(`Failed to download PDF: ${error.message}`)
+    }
+  }
+
+  static async requestSummary(bookId) {
     try {
       const book = await Book.findById(bookId)
       if (!book) {
         throw new Error('Book not found')
       }
 
-      if (!book.summary?.text) {
-        throw new Error('No summary available for this book')
+      if (book.summary?.status === 'completed' && book.summary?.text) {
+        return { message: 'Summary already exists', summary: book.summary.text }
       }
 
-      if (book.summary.status !== 'completed') {
-        throw new Error(`Summary is not ready. Current status: ${book.summary.status}`)
+      if (!book.bookLink?.includes('drive.google.com')) {
+        throw new Error('Invalid book link: Must be a Google Drive link')
       }
 
-      const cleanText = book.summary.text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
-
-      if (!cleanText) {
-        throw new Error('Summary text is empty after cleaning')
+      book.summary = {
+        status: 'pending',
+        lastUpdated: new Date(),
       }
+      await book.save()
 
-      const audioBuffer = await TextToSpeechService.convertToSpeech(cleanText)
+      this.generateSummaryAsync(book)
 
-      if (!audioBuffer || audioBuffer.length === 0) {
-        throw new Error('Generated audio buffer is empty')
-      }
-
-      return {
-        audio: audioBuffer,
-        bookTitle: book.title,
-      }
+      return { message: 'Summary generation started' }
     } catch (error) {
-      console.error('Error in getSummaryAudio:', error.message)
       throw error
+    }
+  }
+
+  static async generateSummaryAsync(book) {
+    try {
+      book.summary.status = 'processing'
+      book.summary.lastUpdated = new Date()
+      await book.save()
+
+      const pdfBuffer = await this.downloadFromGoogleDrive(book.bookLink)
+      const text = await extractTextFromPDF(pdfBuffer)
+
+      if (!text || text.length === 0) {
+        throw new Error('No text could be extracted from the PDF')
+      }
+
+      const chunks = splitIntoChunks(text)
+      const summary = await generateBookSummary(chunks, {
+        maxParallel: 2,
+        progressCallback: async progress => {
+          if (progress.stage === 'chunk_summaries') {
+            book.summary.lastUpdated = new Date()
+            await book.save()
+          }
+        },
+      })
+
+      book.summary = {
+        text: summary,
+        status: 'completed',
+        lastUpdated: new Date(),
+      }
+      await book.save()
+    } catch (error) {
+      book.summary = {
+        status: 'failed',
+        error: error.message,
+        lastUpdated: new Date(),
+      }
+      await book.save()
+    }
+  }
+
+  static async getSummaryStatus(bookId) {
+    const book = await Book.findById(bookId)
+    if (!book) {
+      throw new Error('Book not found')
+    }
+
+    return {
+      status: book.summary?.status || null,
+      lastUpdated: book.summary?.lastUpdated || null,
+      summary: book.summary?.status === 'completed' ? book.summary.text : null,
+      error: book.summary?.error || null,
+    }
+  }
+
+  static async getSummaryAudio(bookId) {
+    const book = await Book.findById(bookId)
+    if (!book) {
+      throw new Error('Book not found')
+    }
+
+    if (!book.summary?.text) {
+      throw new Error('No summary available for this book')
+    }
+
+    if (book.summary.status !== 'completed') {
+      throw new Error(`Summary is not ready. Current status: ${book.summary.status}`)
+    }
+
+    const cleanText = book.summary.text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
+
+    if (!cleanText) {
+      throw new Error('Summary text is empty after cleaning')
+    }
+
+    const audioBuffer = await TextToSpeechService.convertToSpeech(cleanText)
+
+    if (!audioBuffer || audioBuffer.length === 0) {
+      throw new Error('Generated audio buffer is empty')
+    }
+
+    return {
+      audio: audioBuffer,
+      bookTitle: book.title,
     }
   }
 }

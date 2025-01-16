@@ -8,7 +8,6 @@ export class BookSummaryController {
       const result = await BookSummaryService.requestSummary(bookId)
       res.status(StatusCodes.OK).json(result)
     } catch (error) {
-      console.error('Error in requestSummary:', error)
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         message: 'Error requesting summary',
         error: error.message,
@@ -22,7 +21,6 @@ export class BookSummaryController {
       const status = await BookSummaryService.getSummaryStatus(bookId)
       res.status(StatusCodes.OK).json(status)
     } catch (error) {
-      console.error('Error in getSummaryStatus:', error)
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
         message: 'Error getting summary status',
         error: error.message,
