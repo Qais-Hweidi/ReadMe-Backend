@@ -2,7 +2,8 @@ export const corsOptions = {
   origin:
     process.env.NODE_ENV === 'production'
       ? [
-          'http://localhost',
+          'https://localhost',
+          'https://readme-backend-zdiq.onrender.com',
           // Add Flutter app URL here when deployed
         ]
       : '*',
