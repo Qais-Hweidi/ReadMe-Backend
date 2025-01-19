@@ -41,8 +41,6 @@ export class BookSummaryController {
 
       res.setHeader('Content-Type', 'audio/mpeg')
       res.setHeader('Content-Disposition', `attachment; filename="summary-${bookId}.mp3"`)
-      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
-      res.setHeader('X-Content-Type-Options', 'nosniff')
       res.send(audioResult.audio)
     } catch (error) {
       if (error.message.includes('Book not found')) {
