@@ -1,11 +1,110 @@
-# ReadMe-Backend
+# ReadMe - Advanced Digital Reading Platform
 
-With the rise of artificial intelligence, it is becoming increasingly important to keep learning every day, so there is a need for better e-book platforms that offer enhanced features and user experience. The ReadMe project aims to develop an advanced digital reading solution combining modern technology and an easy-to-use interface.
+ReadMe is an advanced digital reading platform that combines modern technology with an easy-to-use interface to enhance the reading experience. For detailed documentation and screenshots, check out our [comprehensive project report](https://drive.google.com/file/d/1DVYd3qn6y3gwz0Cg6VOAvVfZ6gcLtJKr/view?usp=sharing).
 
-The key aspects of this project include creating a seamless reading ecosystem that adapts to users' needs. The platform will support various book formats and offer features such as customizable interfaces, flexible subscription plans, and secure payment options.
+## Features
 
-Our main objective is to develop a modern platform where users can easily find, download, and read digital books. The solution will support multiple book formats and allow users to access their downloaded content without an internet connection. We will implement AI technology to enhance the overall user experience.
+- 📚 Multi-format book support
+- 🤖 AI-powered book summarization
+- 🎧 Text-to-Speech capabilities
+- 💳 Flexible subscription plans
+- 📱 Cross-platform compatibility
+- 🔍 Advanced search functionality
+- 📖 Offline reading support
+- 💬 AI-powered book discussions
+- 📊 Reading progress tracking
+- ⭐ Review and rating system
 
-For development, we will use Flutter for the application interface and Node.js for backend services. This technical approach ensures the platform will be efficient, scalable, and capable of handling features from user authentication to AI-powered features.
+## Technology Stack
 
-While other e-book platforms exist, ReadMe sets itself apart through its AI integration and focus on user experience. By addressing common limitations in existing platforms, such as offline access and format support, ReadMe aims to provide an improved solution for digital reading.
+- **Backend**: Node.js, Express.js
+- **Database**: MongoDB with Mongoose
+- **Authentication**: JWT, Firebase Admin
+- **File Storage**: Cloudinary
+- **AI Services**: Claude AI (Anthropic), ElevenLabs
+- **Payment Processing**: Custom Lahza integration
+- **Email Service**: SendGrid
+- **Push Notifications**: Firebase Cloud Messaging
+- **Hosting**: Render
+
+## Prerequisites
+
+- Node.js (v14 or higher)
+- MongoDB
+- npm or yarn
+- Firebase account
+- Cloudinary account
+- SendGrid account
+- Anthropic API access
+- ElevenLabs API access
+
+## Installation
+
+1. Clone the repository:
+   git clone https://github.com/yourusername/readme-backend.git
+   cd readme-backend
+
+2. Install dependencies:
+   npm install
+
+3. Set up environment variables:
+   cp .env.example .env
+
+4. Configure your environment variables in `.env` file
+
+5. Start the development server:
+   npm run dev
+
+## Project Structure
+
+src/
+├── api/
+│ ├── controllers/ # Request handlers
+│ ├── models/ # Database models
+│ ├── routes/ # API routes
+│ ├── services/ # Business logic
+│ ├── validations/ # Request validation
+│ └── middlewares/ # Custom middlewares
+├── config/ # Configuration files
+├── utils/ # Utility functions
+└── index.js # Application entry point
+
+## Environment Variables
+
+NODE_ENV=development
+PORT=3000
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
+SENDGRID_API_KEY=your_sendgrid_key
+SENDGRID_VERIFIED_SENDER=your_verified_email
+CLOUDINARY_API_SECRET=your_cloudinary_secret
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=your_client_email
+FIREBASE_PRIVATE_KEY=your_private_key
+ANTHROPIC_API_KEY=your_anthropic_key
+ELEVENLABS_API_KEY=your_elevenlabs_key
+
+## Database Models
+
+- User
+- Book
+- Author
+- Category
+- Review
+- SubscriptionPlan
+- Transaction
+- PurchasedBooks
+- Report
+
+## External Services Integration
+
+- **Cloudinary**: Image and PDF storage
+- **SendGrid**: Email notifications
+- **Firebase**: Push notifications and authentication
+- **Claude AI**: Book summarization and chat
+- **ElevenLabs**: Text-to-speech conversion
+- **Lahza**: Payment processing
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
