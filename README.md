@@ -57,6 +57,7 @@ ReadMe is an advanced digital reading platform that combines modern technology w
 
 ## Project Structure
 
+```bash
 src/
 ├── api/
 │   ├── controllers/    # Request handlers
@@ -68,9 +69,11 @@ src/
 ├── config/           # Configuration files
 ├── utils/            # Utility functions
 └── index.js         # Application entry point
+```
 
 ## Environment Variables
 
+```env
 NODE_ENV=development
 PORT=3000
 MONGODB_URI=your_mongodb_uri
@@ -83,6 +86,7 @@ FIREBASE_CLIENT_EMAIL=your_client_email
 FIREBASE_PRIVATE_KEY=your_private_key
 ANTHROPIC_API_KEY=your_anthropic_key
 ELEVENLABS_API_KEY=your_elevenlabs_key
+```
 
 ## Database Models
 
