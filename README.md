@@ -70,6 +70,10 @@ src/
 ├── utils/            # Utility functions
 └── index.js         # Application entry point
 ```
+Postman:
+
+![Image](https://github.com/user-attachments/assets/d5e3d20b-44db-4ed1-83cc-c009b2f8d33d)
+![Image](https://github.com/user-attachments/assets/831a18f4-c2c3-4a05-b5fe-62f7024e1110)
 
 ## Environment Variables
 
@@ -99,6 +103,9 @@ ELEVENLABS_API_KEY=your_elevenlabs_key
 - Transaction
 - PurchasedBooks
 - Report
+
+![Image](https://github.com/user-attachments/assets/1065550e-c031-4ad7-9152-93321966a5d4)
+![Image](https://github.com/user-attachments/assets/14b1561d-b3b8-43ec-ab1a-bc71807a9dab)
 
 ## External Services Integration
 
