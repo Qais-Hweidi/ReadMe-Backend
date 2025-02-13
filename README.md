@@ -59,15 +59,15 @@ ReadMe is an advanced digital reading platform that combines modern technology w
 
 src/
 ├── api/
-│ ├── controllers/ # Request handlers
-│ ├── models/ # Database models
-│ ├── routes/ # API routes
-│ ├── services/ # Business logic
-│ ├── validations/ # Request validation
-│ └── middlewares/ # Custom middlewares
-├── config/ # Configuration files
-├── utils/ # Utility functions
-└── index.js # Application entry point
+│   ├── controllers/    # Request handlers
+│   ├── models/        # Database models
+│   ├── routes/        # API routes
+│   ├── services/      # Business logic
+│   ├── validations/   # Request validation
+│   └── middlewares/   # Custom middlewares
+├── config/           # Configuration files
+├── utils/            # Utility functions
+└── index.js         # Application entry point
 
 ## Environment Variables
 
