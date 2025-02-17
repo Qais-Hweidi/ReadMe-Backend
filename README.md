@@ -1,6 +1,6 @@
 # ReadMe - Advanced Digital Reading Platform
 
-ReadMe is an advanced digital reading platform that combines modern technology with an easy-to-use interface to enhance the reading experience. For detailed documentation and screenshots, check out our [comprehensive project report](https://drive.google.com/file/d/1DVYd3qn6y3gwz0Cg6VOAvVfZ6gcLtJKr/view?usp=sharing).
+ReadMe is an advanced digital reading platform that combines modern technology with an easy-to-use interface to enhance the reading experience. For detailed documentation and screenshots, check out our [comprehensive project report](https://drive.google.com/file/d/1sVeB12zao46hxnjItZF7aRlsTThrp0MP/view?usp=sharing).
 
 ## Features
 
