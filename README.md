@@ -1,6 +1,6 @@
 # ReadMe - Advanced Digital Reading Platform
 
-ReadMe is an advanced digital reading platform that combines modern technology with an easy-to-use interface to enhance the reading experience. For detailed documentation and screenshots, check out our [comprehensive project report](https://drive.google.com/file/d/1DVYd3qn6y3gwz0Cg6VOAvVfZ6gcLtJKr/view?usp=sharing).
+ReadMe is an advanced digital reading platform that combines modern technology with an easy-to-use interface to enhance the reading experience. For detailed documentation and screenshots, check out our [comprehensive project report](https://drive.google.com/file/d/1KVjPKfwl--7eXSHzYwsiK2b_SgcVMvmN/view?usp=sharing).
 
 ## Features
 
@@ -70,6 +70,7 @@ src/
 ├── utils/            # Utility functions
 └── index.js         # Application entry point
 ```
+
 Postman:
 
 ![Image](https://github.com/user-attachments/assets/d5e3d20b-44db-4ed1-83cc-c009b2f8d33d)
