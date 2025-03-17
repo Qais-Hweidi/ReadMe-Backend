@@ -4,14 +4,12 @@ ReadMe is an advanced digital reading platform that combines modern technology w
 
 ## Features
 
-- 📚 Multi-format book support
 - 🤖 AI-powered book summarization
 - 🎧 Text-to-Speech capabilities
 - 💳 Flexible subscription plans
 - 📱 Cross-platform compatibility
 - 🔍 Advanced search functionality
 - 📖 Offline reading support
-- 💬 AI-powered book discussions
 - 📊 Reading progress tracking
 - ⭐ Review and rating system
 
